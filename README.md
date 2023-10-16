@@ -30,4 +30,6 @@ This are the available options:
 ```
 
 The script does:
-update, upgrade, dist-upgrade, autoclean, autoremove.
+update, upgrade, dist-upgrade, autoclean, autoremove
+Also this script update (if installed):
+flatpak, rust, composer, clam av

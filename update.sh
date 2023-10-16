@@ -14,6 +14,15 @@ E_NOTROOT=87	# Non-root exit error.
 E_DONE=0	# Normal exit. 
 # Run as root, of course.
 
+# $1 : Username
+# $2 : Command `command`
+function run_as_user() {
+	#test if running bash as a different user works
+	sudo -i -u $1 bash << EOF
+	$2
+EOF
+}
+
 function RU_ROOT {
 	if [ "$UID" -ne "$ROOT_UID" ]
 	then
@@ -23,34 +32,58 @@ function RU_ROOT {
 
 function Dont_Ask {
 	echo -e "\e[1m\e[91m[Updating Repos]\e[21m\e[39m";
-	sudo apt-get update;
+	apt-get update;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating programms]\e[21m\e[39m";
-	sudo apt-get upgrade -y;
+	apt-get upgrade -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating system]\e[21m\e[39m";
-	sudo apt-get dist-upgrade -y;
+	apt-get dist-upgrade -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Cleaning up]\e[21m\e[39m";
-	sudo apt-get autoremove -y;
-	sudo apt-get autoclean -y;
+	apt-get autoremove -y;
+	apt-get autoclean -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating flatpak]\e[21m\e[39m";
+	flatpak update;
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
+        run_as_user $1 "rustup update"
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating Composer If available]\e[21m\e[39m";
+        composer self-update
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating freshclam (clamAV) If available]\e[21m\e[39m";
+        freshclam
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	exit $E_DONE;
 }
 
 function Ask {
         echo -e "\e[1m\e[91m[Updating Repos]\e[21m\e[39m";
-        sudo apt-get update;
+        apt-get update;
         echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
         echo -e "\e[1m\e[91m[Updating programms]\e[21m\e[39m";
-        sudo apt-get upgrade;
+        apt-get upgrade;
         echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
         echo -e "\e[1m\e[91m[Updating system]\e[21m\e[39m";
-        sudo apt-get dist-upgrade;
+        apt-get dist-upgrade;
         echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
         echo -e "\e[1m\e[91m[Cleaning up]\e[21m\e[39m";
-        sudo apt-get autoremove;
-        sudo apt-get autoclean;
+        apt-get autoremove;
+        apt-get autoclean;
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating flatpak]\e[21m\e[39m";
+	flatpak update;
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
+	run_as_user $1 "rustup update"
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating Composer If available]\e[21m\e[39m";
+        composer self-update
+        echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+        echo -e "\e[1m\e[91m[Updating freshclam (clamAV) If available]\e[21m\e[39m";
+        freshclam
         echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
         exit $E_DONE;
 }
@@ -60,10 +93,11 @@ function display_help {
 	echo -e "";
 	echo -e "The programm requires root permitions."
 	echo -e "";
-	echo -e "$SCRIPT_NAME -[v|h|y|n]"
+	echo -e "$SCRIPT_NAME -[v|h|y|n|u]"
 	echo -e "\t -v \t\t outputs version."
 	echo -e "\t -h \t\t play this message"
 	echo -e "\t --help \t play this message"
+	echo -e "\t -u \t\t Specific user name to run some commands like rustup"
 	echo -e "\t -y \t\t do not ask for updates, this is the default usage action"
 	echo -e "\t -n \t\t ask for updates"
 }
@@ -79,43 +113,66 @@ function version {
         exit $E_NOTROOT
 }
 
-if [ $# -gt 0 ];
-then
-	while [ $# -gt 0 ]
-	do
-    		case "$1" in
-        	-h)
-	       		help;
-        		exit
-        		;;
+userset=0;
+user="root";
+y=0
+while getopts ":h:v:y:n:u:" opt; do
+	case $opt in
+		h)
+			help;
+			exit
+			;;
+		v)
+			version;
+			exit
+			;;
+		y)
+			y=1;
+			;;
+		n)
+			y=0;
+			;;
+		u)
+			userset=1;
+			user="$OPTARG"
+			;;
+		\?) echo "Invalid option -$OPTARG" >&2
+			exit 1
+			;;
+	esac
+
+	case $OPTARG in
+		h) ;;
+		v) ;;
+		y) ;;
+		n) ;;
+		u) ;;
 		--help)
 			help;
 			exit
-			;;        	
-		-v)
-        		version;
-			exit
 			;;
-		-y)
-			RU_ROOT;
-			Dont_Ask;
-			exit
+		-*) echo "Option $opt needs a valid argument"
+			exit 1
 			;;
-		-n)
-        		RU_ROOT;
-			Ask;
-			exit
-	        	;;
-		*)
-			help;
-			exit
-			;;
-    		esac
-		shift
-	done
-else
-        RU_ROOT;
-        Dont_Ask;
+	esac
+done
+
+if [ $userset -eq 0 ];
+then
+	echo -e "\e[1m\e[91m\t***User is set to root! There are command that are user level specific and might not run as expected!***\e[21m\e[39m";
 fi
 
-
+if [ $# -eq 0 ];
+then
+	RU_ROOT;
+	Dont_Ask $user;
+else
+	if [ $y -eq 0 ];
+	then
+		RU_ROOT;
+		Ask $user;
+	else
+		RU_ROOT;
+		Dont_Ask $user;
+	fi
+fi

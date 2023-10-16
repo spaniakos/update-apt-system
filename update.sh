@@ -47,6 +47,9 @@ function Update_Without_Asking {
 	echo -e "\e[1m\e[91m[Updating flatpak]\e[21m\e[39m";
 	flatpak update;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "\e[1m\e[91m[Updating snap\e[21m\e[39m";
+	snap refresh
+	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
 	run_as_user $1 "rustup update"
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
@@ -75,6 +78,9 @@ function Update_With_Asking {
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating flatpak]\e[21m\e[39m";
 	flatpak update;
+	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "\e[1m\e[91m[Updating snap\e[21m\e[39m";
+	snap refresh
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
 	run_as_user $1 "rustup update"

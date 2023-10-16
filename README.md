@@ -24,6 +24,15 @@ This is a programm to update your system.
 
 The programm requires root permitions.
 
+It checks if below packages and commands are available and issues an update to them as well
+Flatpak
+Snap
+Rust
+Composer
+ClamAV
+
+USAGE:
+
 ./update.sh -[v|h|y|n|u]
 
 Plain parameters:

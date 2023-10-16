@@ -30,67 +30,143 @@ function RU_ROOT {
 	fi
 }
 
+#function to check if a package is installed and return true or false
+# $1 : package name
+function is_package_installed {
+	if dpkg -s $1 >/dev/null 2>&1; then
+		return 0;
+	else
+		return 1;
+	fi
+}
+
+#function to check if a command is installed and return true or false
+# $1 : command name
+function is_command_installed {
+	if command -v $1 >/dev/null 2>&1; then
+		return 0;
+	else
+		return 1;
+	fi
+}
+
 function Update_Without_Asking {
+	current_date_time=$(date +"%Y-%m-%d %H:%M:%S")
+	echo -e "\e[1m\e[92m[Update starting]: $current_date_time\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating Repos]\e[21m\e[39m";
 	apt-get update;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
 	echo -e "\e[1m\e[91m[Updating programms]\e[21m\e[39m";
 	apt-get upgrade -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
 	echo -e "\e[1m\e[91m[Updating system]\e[21m\e[39m";
 	apt-get dist-upgrade -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
 	echo -e "\e[1m\e[91m[Cleaning up]\e[21m\e[39m";
 	apt-get autoremove -y;
 	apt-get autoclean -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating flatpak]\e[21m\e[39m";
-	flatpak update -y;
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating snap\e[21m\e[39m";
-	snap refresh;
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
-	run_as_user $1 "rustup update"
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating Composer If available]\e[21m\e[39m";
-	composer self-update
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating freshclam (clamAV) If available]\e[21m\e[39m";
-	freshclam
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
+	#check if flatpak is installed
+	if is_package_installed flatpak; then
+		echo -e "\e[1m\e[91m[Updating flatpak If available]\e[21m\e[39m";
+		flatpak update -y;
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if snap is installed
+	if is_package_installed snap; then
+		echo -e "\e[1m\e[91m[Updating snap]\e[21m\e[39m";
+		snap refresh;
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if rust command is installed
+	if is_command_installed rustup; then
+		echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
+		run_as_user $1 "rustup update"
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if composer command is installed
+	if is_command_installed composer; then
+		echo -e "\e[1m\e[91m[Updating Composer If available]\e[21m\e[39m";
+		composer self-update
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if freshclam command is installed
+	if is_command_installed freshclam; then
+		echo -e "\e[1m\e[91m[Updating freshclam (clamAV) If available]\e[21m\e[39m";
+		freshclam
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	end_date_time=$(date +"%Y-%m-%d %H:%M:%S")
+	echo -e "\e[1m\e[92m[Update finished]: $end_date_time\e[21m\e[39m";
 	exit $E_DONE;
 }
 
 function Update_With_Asking {
+	current_date_time=$(date +"%Y-%m-%d %H:%M:%S")
+	echo -e "\e[1m\e[92m[Update starting]: $current_date_time\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating Repos]\e[21m\e[39m";
 	apt-get update;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
 	echo -e "\e[1m\e[91m[Updating programms]\e[21m\e[39m";
 	apt-get upgrade;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
 	echo -e "\e[1m\e[91m[Updating system]\e[21m\e[39m";
 	apt-get dist-upgrade;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
 	echo -e "\e[1m\e[91m[Cleaning up]\e[21m\e[39m";
 	apt-get autoremove;
 	apt-get autoclean;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating flatpak]\e[21m\e[39m";
-	flatpak update;
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating snap\e[21m\e[39m";
-	snap refresh;
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
-	run_as_user $1 "rustup update"
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating Composer If available]\e[21m\e[39m";
-	composer self-update
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
-	echo -e "\e[1m\e[91m[Updating freshclam (clamAV) If available]\e[21m\e[39m";
-	freshclam
-	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+	echo -e "";
+	#check if flatpak is installed
+	if is_package_installed flatpak; then
+		echo -e "\e[1m\e[91m[Updating flatpak If available]\e[21m\e[39m";
+		flatpak update;
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if snap is installed
+	if is_package_installed snap; then
+		echo -e "\e[1m\e[91m[Updating snap If available]\e[21m\e[39m";
+		snap refresh;
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if rust command is installed
+	if is_command_installed rustup; then
+		echo -e "\e[1m\e[91m[Updating rust If available]\e[21m\e[39m";
+		run_as_user $1 "rustup update"
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if composer command is installed
+	if is_command_installed composer; then
+		echo -e "\e[1m\e[91m[Updating Composer If available]\e[21m\e[39m";
+		composer self-update
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	#check if freshclam command is installed
+	if is_command_installed freshclam; then
+		echo -e "\e[1m\e[91m[Updating freshclam (clamAV) If available]\e[21m\e[39m";
+		freshclam
+		echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
+		echo -e "";
+	fi
+	end_date_time=$(date +"%Y-%m-%d %H:%M:%S")
+	echo -e "\e[1m\e[92m[Update finished]: $end_date_time\e[21m\e[39m";
 	exit $E_DONE;
 }
 

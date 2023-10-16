@@ -45,7 +45,7 @@ function Update_Without_Asking {
 	apt-get autoclean -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating flatpak]\e[21m\e[39m";
-	flatpak update;
+	flatpak update -y;
 	echo -e "\e[1m\e[92m[DONE]\e[21m\e[39m";
 	echo -e "\e[1m\e[91m[Updating snap\e[21m\e[39m";
 	snap refresh;

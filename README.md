@@ -21,15 +21,14 @@ This are the available options:
 
 ```
 This is a programm to update your system.
+It also checks if below packages and commands are available and issues an update to them as well
+*Flatpak
+*Snap
+*Rust
+*Composer
+*ClamAV
 
 The programm requires root permitions.
-
-It checks if below packages and commands are available and issues an update to them as well
-Flatpak
-Snap
-Rust
-Composer
-ClamAV
 
 USAGE:
 

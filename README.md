@@ -1,4 +1,4 @@
-# update-apt
+# update-apt-system
 An update script for apt respositories.
 
 In order to use it place the update.sh to a directory.

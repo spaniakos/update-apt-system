@@ -89,7 +89,7 @@ function Update_With_Asking {
 }
 
 function display_help {
-	echo -e "this is a programm to update your system."
+	echo -e "This is a programm to update your system."
 	echo -e "";
 	echo -e "The programm requires root permitions."
 	echo -e "";

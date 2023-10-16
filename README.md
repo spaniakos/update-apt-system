@@ -16,11 +16,6 @@ chmod +x update.sh
 ```
 
 this is a programm to update your system.
-
-This are the available options:
-
-```
-This is a programm to update your system.
 It also checks if below packages and commands are available and issues an update to them as well
 *Flatpak
 *Snap
@@ -28,15 +23,21 @@ It also checks if below packages and commands are available and issues an update
 *Composer
 *ClamAV
 
-The programm requires root permitions.
+This are the available options:
 
-USAGE:
+```
+This is a program to update your system.
+
+It also checks if below packages and commands are available and issues an update to them as well
+Flatpak - Snap - Rust - Composer - ClamAV
+
+The program requires root permissions.
 
 ./update.sh -[v|h|y|n|u]
 
 Plain parameters:
 	 -v 		 outputs version.
-	 -h 		 play this message
+	 -h 		 display this message
 	 -y 		 do not ask for updates, this is the default usage action
 	 -n 		 ask for updates
 
@@ -45,11 +46,10 @@ Argument parameters:
 
 Double quotes variables
 	 --version 	 outputs version.
-	 --help 	 play this message
-
+	 --help 	 display this message
 ```
 
 The script does:
 update, upgrade, dist-upgrade, autoclean, autoremove
 Also this script update (if installed):
-flatpak, rust, composer, clam av
+Flatpak - Snap - Rust - Composer - ClamAV

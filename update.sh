@@ -235,6 +235,11 @@ function display_help {
 	echo -e "This is a program to update your system."
 	echo -e "";
 
+	# Display Packages and commands that are updated except apt
+	echo -e "It also checks if below packages and commands are available and issues an update to them as well";
+	echo -e "Flatpak - Snap - Rust - Composer - ClamAV";
+	echo -e "";
+
 	# Display program requirements
 	echo -e "The program requires root permissions."
 	echo -e "";

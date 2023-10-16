@@ -7,7 +7,7 @@ SCRIPT_NAME="$0"
 VERSION="1.0"
 AUTHOR="G.Spanos - gspanos@makeasite.gr"
 CREATE_DATE="2/9/2016"
-LAST_UPDATE="2/9/2016"
+LAST_UPDATE="16/10/2023"
 
 ROOT_UID=0	# Only users with $UID 0 have root privileges.
 E_NOTROOT=87	# Non-root exit error.
@@ -97,7 +97,7 @@ function display_help {
 	echo -e "\t -v \t\t outputs version."
 	echo -e "\t -h \t\t play this message"
 	echo -e "\t --help \t play this message"
-	echo -e "\t -u \t\t Specific user name to run some commands like rustup"
+	echo -e "\t -u <username> \t\t Specific user name to run some commands like rustup"
 	echo -e "\t -y \t\t do not ask for updates, this is the default usage action"
 	echo -e "\t -n \t\t ask for updates"
 }
@@ -116,7 +116,7 @@ function version {
 userset=0;
 user="root";
 y=0
-while getopts ":h:v:y:n:u:" opt; do
+while getopts ":h:v:y:n:u:-help:" opt; do
 	case $opt in
 		h)
 			help;
@@ -135,6 +135,10 @@ while getopts ":h:v:y:n:u:" opt; do
 		u)
 			userset=1;
 			user="$OPTARG"
+			;;
+		-help)
+			help;
+			exit
 			;;
 		\?) echo "Invalid option -$OPTARG" >&2
 			exit 1

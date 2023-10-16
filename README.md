@@ -20,13 +20,25 @@ this is a programm to update your system.
 This are the available options:
 
 ```
-./update.sh -[v|h|y|n|u  ]
--v 	outputs version.
--h 	play this message
---help 	play this message
--u <Username>  Specific user name to run some commands like rustup
--y 	do not ask for updates, this is the default usage action
--n 	ask for updates
+This is a programm to update your system.
+
+The programm requires root permitions.
+
+./update.sh -[v|h|y|n|u]
+
+Plain parameters:
+	 -v 		 outputs version.
+	 -h 		 play this message
+	 -y 		 do not ask for updates, this is the default usage action
+	 -n 		 ask for updates
+
+Argument parameters:
+	 -u <user> 	 Specific user name to run some commands like rustup
+
+Double quotes variables
+	 --version 	 outputs version.
+	 --help 	 play this message
+
 ```
 
 The script does:

@@ -4,7 +4,7 @@
 #          The script updates the system.
 # ------------------------------------------------------------------
 SCRIPT_NAME="$0"
-VERSION="1.0"
+VERSION="1.1"
 AUTHOR="G.Spanos - gspanos@makeasite.gr"
 CREATE_DATE="2/9/2016"
 LAST_UPDATE="16/10/2023"

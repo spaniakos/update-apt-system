@@ -62,3 +62,9 @@ Future Work:
 * Make the package runnable without sudo by asking sudo on the first command rather than not allowing the user to run it
 * Add More updatable packages ( Uppon request or uppon usage )
 ```
+
+Known Bugs:
+
+```
+* Snap is not getting udpated, solution is know, will give some time for someone to pick up the issue and get it fixed.
+```

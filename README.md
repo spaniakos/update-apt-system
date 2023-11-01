@@ -53,3 +53,12 @@ The script does:
 update, upgrade, dist-upgrade, autoclean, autoremove
 Also this script update (if installed):
 Flatpak - Snap - Rust - Composer - ClamAV
+
+Future Work:
+
+```
+* Consider adding updater to apt as a package
+* Consider writing a function to auto hook the updater to a crontab or create a deamon and set auto-update itervals ( Not recommended for bleeding edge systems )
+* Make the package runnable without sudo by asking sudo on the first command rather than not allowing the user to run it
+* Add More updatable packages ( Uppon request or uppon usage )
+```

@@ -22,6 +22,7 @@ case "$FORMAT" in
         for item in bin docs completions man scripts packaging tests .github flake.nix install.sh update.sh Makefile README.md VERSION LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md; do
             cp -R "$ROOT/$item" "$WORK/updateself-$VERSION/"
         done
+        find "$WORK/updateself-$VERSION" -type d -name __pycache__ -prune -exec rm -rf {} +
         tar -czf "$OUT/updateself-$VERSION.tar.gz" -C "$WORK" "updateself-$VERSION"
         # Source contains packaging/build inputs as well as the executable.
         ;;

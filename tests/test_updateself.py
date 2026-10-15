@@ -225,6 +225,17 @@ esac
         self.assertEqual(p.returncode, 2)
         self.assertFalse(logfile.exists())
 
+    def test_symlinked_home_still_recognises_user_tool(self):
+        real = self.root / '.bun/bin'
+        real.mkdir(parents=True)
+        shutil.move(self.stub('bun'), real / 'bun')
+        alias = self.root / 'home-link'
+        alias.symlink_to(self.root, target_is_directory=True)
+        self.env['HOME'] = str(alias)
+        p, c = self.run_script('--only', 'bun')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(c, ['bun upgrade'])
+
 
 class InstallerTests(unittest.TestCase):
     def setUp(self):

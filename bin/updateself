@@ -132,6 +132,8 @@ else
     fi
 fi
 [ -n "$TARGET_HOME" ] && [ -d "$TARGET_HOME" ] || die 'Cannot resolve target home'
+# macOS exposes /var through /private/var; compare physical paths consistently.
+TARGET_HOME=$(cd "$TARGET_HOME" && pwd -P) || die 'Cannot canonicalise target home'
 # Existing user PATH takes priority. Never prepend a different user's directories
 # to the privileged process PATH; only pass them into that user's process.
 USER_PATH="$TARGET_HOME/.local/bin:$TARGET_HOME/.cargo/bin:$TARGET_HOME/.bun/bin:$TARGET_HOME/.deno/bin:$TARGET_HOME/.nix-profile/bin:/opt/homebrew/bin:/usr/local/bin:/usr/pkg/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin"

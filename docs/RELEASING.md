@@ -4,19 +4,51 @@
 
 - Pull requests and pushes to master: syntax, ShellCheck, unit/installer tests,
   package generation, disposable installation/removal checks and release-preview assembly.
-- Manual **Release packages** dispatch on a branch: the same build matrix, full
-  release-asset assembly, checksum verification and a **release-preview** artifact.
-  This creates no tag, attestation or GitHub Release.
+- Manual **Release packages** with **mode=preview** (default): the full build matrix,
+  release assembly and checksum verification. No tag, attestation or release mutation.
+- Manual **Release packages** with **mode=create-draft** on **master**: validate the
+  requested tag against VERSION and the finalized changelog, run the full build,
+  generate provenance, create the tag at the built commit, and populate a draft.
 - `vX.Y.Z` tag: require VERSION/runtime/man consistency, run checks/builds, collect
   all 13 required package bundles, release notes, a build report, checksums and
-  provenance, then create a **draft GitHub Release**.
+  provenance, then create or reuse a **draft GitHub Release**.
   Review the build report and publish the draft manually. No registry submission.
 
 Builds have no package-repository publishing credentials. GITHUB_TOKEN only gets
-release/attestation write permissions in the final tag-release job. Actions are
+release/attestation write permissions in the final draft-release job. Actions are
 pinned to reviewed commit SHAs. Checkout and artifact actions use Node 24 and
 require runner 2.327.1 or newer; GitHub-hosted runners satisfy this requirement. BSD VM actions and community container images are external
 build dependencies; review their updates. No production machine is a CI target.
+
+## Release entirely from github.com
+
+1. After the finalization PR is merged, wait for **master** CI to pass.
+2. Optionally open **Releases → Draft a new release**, select the new tag name and
+   target **master**, enter your title/notes, and **Save draft**. Saving a draft does
+   not create the Git tag or start builds.
+3. Open **Actions → Release packages → Run workflow**.
+4. Select branch **master**, choose **mode=create-draft**, and enter the exact tag
+   matching VERSION, for example **v2.0.0**. Then click **Run workflow**.
+5. Wait for every job, including **draft-release**, to succeed. The workflow builds
+   and verifies all packages before creating the tag at that exact built commit.
+6. Open the saved/generated draft under **Releases**, review its downloads,
+   checksums and notes, then click **Publish release**.
+
+Existing draft titles and release-note bodies are preserved. If no draft exists,
+the workflow creates one from docs/releases/X.Y.Z.md. It never publishes a release.
+Do not publish the draft while the workflow is uploading its assets.
+
+Matching filenames in an unpublished draft are replaced when retrying an upload;
+unrelated filenames and the draft's title/notes are retained. A published release
+or a tag pointing at another commit causes failure rather than modification.
+An existing matching lightweight or annotated tag is reused without moving it.
+Retry the same Actions run after a transient upload failure, so its source commit
+stays the same. A new run from a newer master commit cannot move an existing tag.
+
+Tags created using the built-in GITHUB_TOKEN do not trigger another tag-push
+workflow. The manual run therefore completes builds, tagging and draft upload
+itself; no additional token or secret is required. CLI-created matching tag pushes
+remain supported and also reuse existing drafts.
 
 ## Finding downloads
 
@@ -85,19 +117,19 @@ pinned by digest for fully reproducible infrastructure (future hardening).
 1. Update VERSION, bin/updateself VERSION/help, man page and CHANGELOG together.
 2. Run tests and checks; inspect every package job and target OS result.
 3. Update docs/releases/X.Y.Z.md with user-facing release notes and package limitations.
-4. Manually run **Release packages** on the preparation branch. Confirm the full
+4. Manually run **Release packages** with **mode=preview** on the preparation branch. Confirm the full
    build matrix and assembly job pass. Download release-preview and verify its
    checksums, report and expected platform assets.
 5. Finalize the CHANGELOG release date, rerun checks, and merge the reviewed PR.
-   Tag that exact merged commit `vX.Y.Z`. Tags whose version differs from VERSION,
-   or whose changelog still says unreleased, are rejected.
-6. The tag run rebuilds and validates packages, verifies downloaded checksums,
-   generates provenance attestations and creates a draft with authored release notes.
+   Use **mode=create-draft** from master, or tag that exact merged commit `vX.Y.Z`
+   through Git. A mismatched tag or missing/invalid release date is rejected.
+6. The release run rebuilds and validates packages, verifies downloaded checksums,
+   generates provenance and creates or populates an unpublished draft.
 7. Review the draft and verify downloads before publishing it. Confirm the public
    Releases page and README/Wiki links work. Registry submission remains future work.
 
-The final attestation and draft-creation steps require a real version tag and are
-intentionally skipped in branch previews. A successful preview validates collection
+The final attestation and draft-population steps run only for matching pushed tags
+or explicit create-draft requests on master, and are skipped in preview mode. A successful preview validates collection
 and checksums; it does not claim those tag-only steps have already run.
 
 To verify all assets after downloading them together:
@@ -111,4 +143,8 @@ gh attestation verify PACKAGE --repo spaniakos/update-apt-system
 Replace PACKAGE with a downloaded package filename. Attestations verify provenance;
 they do not replace platform code signing or distribution signing.
 
-No release tag is created by the feature implementation or by merging a PR.
+No release tag is created by merging a PR or running preview mode.
+
+References:
+- https://docs.github.com/en/actions/concepts/security/github_token
+- https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository

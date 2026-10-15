@@ -3,43 +3,50 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Preview packages or create/populate a draft release'
+        type: choice
+        options: [preview, create-draft]
+        default: preview
+        required: true
+      tag:
+        description: 'For create-draft: enter vX.Y.Z matching VERSION'
+        type: string
+        default: ''
+        required: false
 permissions:
   contents: read
 concurrency:
-  group: updateself-release-${{ github.ref }}
+  group: updateself-release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 jobs:
   validate-ref:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      enabled: ${{ steps.request.outputs.enabled }}
+      tag: ${{ steps.request.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate version and release reference
+      - name: Validate version and release request
+        id: request
         env:
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
-          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_MODE: ${{ inputs.mode || 'preview' }}
+          REQUESTED_TAG: ${{ inputs.tag }}
         run: |
           bash scripts/check.sh
-          test -s "docs/releases/$(cat VERSION).md"
-          if [ "$EVENT_NAME" = push ] || [ "$REF_TYPE" = tag ]; then
-            test "$REF_TYPE" = tag
-            test "$REF_NAME" = "v$(cat VERSION)"
-            if grep -Eq "^## $(cat VERSION).*unreleased" CHANGELOG.md; then
-              echo 'Finalize the changelog date before tagging a release.' >&2
-              exit 1
-            fi
-          fi
+          python3 scripts/release_draft.py validate
   build:
     needs: validate-ref
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
   draft-release:
-    needs: build
-    if: github.ref_type == 'tag'
+    needs: [validate-ref, build]
+    if: needs.validate-ref.outputs.enabled == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -59,9 +66,10 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
-      - name: Create draft release
+      - name: Create tag and populate draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.validate-ref.outputs.tag }}
+          SOURCE_REVISION: ${{ github.sha }}
         run: |
-          gh release create "$TAG" dist/* --draft --verify-tag --notes-file dist/RELEASE-NOTES.md --title "updateself $TAG"
+          python3 scripts/release_draft.py populate --tag "$TAG" --revision "$SOURCE_REVISION" --directory dist

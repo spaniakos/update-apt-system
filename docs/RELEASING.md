@@ -3,7 +3,7 @@
 ## Triggers
 
 - Pull requests and pushes to master: syntax, ShellCheck, unit/installer tests,
-  package generation and disposable installation/removal checks.
+  package generation, disposable installation/removal checks and release-preview assembly.
 - Manual **Release packages** dispatch on a branch: the same build matrix, full
   release-asset assembly, checksum verification and a **release-preview** artifact.
   This creates no tag, attestation or GitHub Release.
@@ -22,8 +22,8 @@ build dependencies; review their updates. No production machine is a CI target.
 
 - Development packages: open **Actions → CI → a successful run → Artifacts**.
   These downloads require GitHub sign-in and expire according to Actions retention.
-- Release previews: open **Actions → Release packages → a successful manual run →
-  Artifacts → release-preview**. It contains the exact layout used for release assets.
+- Release previews: open **Actions → CI → a successful run → Artifacts → release-preview**,
+  or the equivalent artifact in a manual **Release packages** run. It contains the exact layout used for release assets.
 - Published versions: [GitHub Releases](https://github.com/spaniakos/update-apt-system/releases).
   Installers and archives appear under **Assets**, alongside SHA256SUMS,
   RELEASE-NOTES.md and BUILD-REPORT.md. Drafts are visible only to maintainers.

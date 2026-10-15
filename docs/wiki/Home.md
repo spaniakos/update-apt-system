@@ -19,12 +19,12 @@ The default skips confirmations. Start with a preview, then review commands with
 | Task | Guide |
 | --- | --- |
 | Install, upgrade, remove or enable completions | [[Installation]] |
-| Select options and components | [[Command Reference|Command-Reference]] |
+| Select options and components | [Command Reference](https://github.com/spaniakos/update-apt-system/wiki/Command-Reference) |
 | Update your platform | [[macOS]], [[Linux]], [[BSD]], [[Nix]] |
-| Understand tool ownership | [[Supported Tools|Supported-Tools]] |
-| Inspect Python and update pip | [[Python and pip|Python-and-pip]] |
-| Download packages or understand CI | [[Packages and Releases|Packages-and-Releases]] |
-| Check compatibility and limitations | [[Platform Support|Platform-Support]] |
+| Understand tool ownership | [Supported Tools](https://github.com/spaniakos/update-apt-system/wiki/Supported-Tools) |
+| Inspect Python and update pip | [Python and pip](https://github.com/spaniakos/update-apt-system/wiki/Python-and-pip) |
+| Download packages or understand CI | [Packages and Releases](https://github.com/spaniakos/update-apt-system/wiki/Packages-and-Releases) |
+| Check compatibility and limitations | [Platform Support](https://github.com/spaniakos/update-apt-system/wiki/Platform-Support) |
 | Resolve failures or skipped tools | [[Troubleshooting]] and [[FAQ]] |
 | See future work | [[Roadmap]] |
 

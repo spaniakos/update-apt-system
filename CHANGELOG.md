@@ -8,6 +8,7 @@
 - Implement reliable options, dry-run, user separation, failure summary and locks.
 - Add Git/archive installation, removal, manual and shell completions.
 - Add generated GitHub Wiki pages, navigation and default-branch publication.
+- Add Node 24 action pins, release preview, validated assets and release notes.
 - Add automated tests, CI, native package generation and draft release workflow.
 - Preserve GPL licence, original authorship, repository URL and update.sh entry point.
 

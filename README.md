@@ -4,6 +4,14 @@ Update installed system packages and common CLI tools with **updateself**, or it
 short command **updsf**. Supports macOS, major Linux package-manager families,
 FreeBSD, OpenBSD, NetBSD and Nix. Created by **G. Spanos**, licensed under GPLv3.
 
+## Downloads
+
+**[Download published releases](https://github.com/spaniakos/update-apt-system/releases)**
+for installers, archives, checksums and release notes. The first 2.0.0 release is
+being prepared; downloads appear after its draft is published. Development builds
+are available under **Actions → CI → Artifacts** and require GitHub sign-in.
+GitHub Packages and distribution repositories are separate future publication targets.
+
 ## Get started
 
 ```bash
@@ -35,7 +43,7 @@ documentation, platform guides and troubleshooting.
 
 The Wiki is generated from reviewed sources in this repository. Release archives
 retain their matching docs. See [documentation maintenance](docs/WIKI.md).
-Until the first Wiki publication, references are also available in [docs](docs).
+The same references are also available in [docs](docs).
 
 ## Contributing and releases
 

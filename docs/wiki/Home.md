@@ -3,6 +3,13 @@
 **updateself** updates installed system packages and common CLI tools.
 **updsf** invokes the same program; update.sh remains available from a checkout.
 
+## Downloads
+
+[Published releases and package downloads](https://github.com/spaniakos/update-apt-system/releases)
+contain installers, checksums and release notes. The first 2.0.0 release is being
+prepared. Until a release is published, use Git installation or signed-in
+**Actions → CI → Artifacts** for development packages.
+
 ## First run
 
 ```bash

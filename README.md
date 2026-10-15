@@ -7,8 +7,8 @@ FreeBSD, OpenBSD, NetBSD and Nix. Created by **G. Spanos**, licensed under GPLv3
 ## Downloads
 
 **[Download published releases](https://github.com/spaniakos/update-apt-system/releases)**
-for installers, archives, checksums and release notes. The first 2.0.0 release is
-being prepared; downloads appear after its draft is published. Development builds
+for installers, archives, checksums and release notes. Downloads appear when a
+release is published; merging alone does not publish a release. Development builds
 are available under **Actions → CI → Artifacts** and require GitHub sign-in.
 GitHub Packages and distribution repositories are separate future publication targets.
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 — unreleased
+## 2.0.0 — 2026-10-15
 
 - Rename the application to updateself, with optional updsf command.
 - Add macOS, major Linux package families, Nix and three BSD package backends.

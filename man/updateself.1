@@ -1,0 +1,70 @@
+.TH UPDATESELF 1 "October 2026" "updateself 2.0.0"
+.SH NAME
+updateself, updsf \- update installed operating-system packages and CLI tools
+.SH SYNOPSIS
+.B updateself
+.RI [ options ]
+.SH DESCRIPTION
+Detects the host and supported installed tools. Runs each updater through its
+installation owner. Missing tools are skipped. The default skips confirmations;
+use --ask for per-command review. No helpers are installed and no reboot is requested.
+.SH OPTIONS
+.TP
+.B -h, --help
+Print the complete option reference, including component identifiers.
+.TP
+.B -v, --version
+Print the version.
+.TP
+.B -y, --yes
+Skip script and supported package-manager confirmations (default).
+.TP
+.B -n, --ask
+Confirm update commands. Requires a terminal.
+.TP
+.B -u, --user USER
+Choose the non-root account used for user-level tools.
+.TP
+.B --dry-run
+Print update commands; allow read-only discovery only.
+.TP
+.B --only LIST, --skip LIST, --include LIST
+Select comma-separated components. Skip takes precedence. Include enables
+optional npm, cargo and aur components.
+.TP
+.B --cleanup, --full-upgrade, --greedy
+Opt into backend cleanup, APT dependency-changing upgrades, or additional casks.
+.TP
+.B --base-install, --apple-install
+Install applicable Apple/BSD base updates. Apple may offer major upgrades.
+Declarative Nix configuration also requires --nix-config.
+.TP
+.B --python PATH, --venv PATH, --python-packages
+Select interpreters/environments for pip updates. The final flag also updates
+their pip-installed packages. Externally managed system Python is respected.
+.TP
+.B --nix-config KIND, --nix-flake PATH, --nix-update-inputs
+Explicit declarative configuration and optional flake input updates.
+.TP
+.B --log FILE, --no-color, --list-components
+Append output to a file, request plain output, or list component identifiers.
+.SH EXAMPLES
+.nf
+updateself --dry-run
+updsf --ask --cleanup
+updateself --only snap,flatpak
+updateself --only python --venv /home/me/env
+.fi
+.SH EXIT STATUS
+0: completed, skipped or preview; 1: failed update; 2: invalid input/environment;
+75: updater lock exists; 130/143: interrupted/terminated.
+.SH FILES
+Git/archive installations track installed files in PREFIX/share/updateself/manifest.
+Per-invoking-user runtime lock: TMPDIR/updateself-UID.lock.
+.SH NOTES
+Successful commands do not necessarily mean packages changed. Inspect updater
+output. --yes cannot bypass authentication or all vendor prompts.
+.SH AUTHOR
+G. Spanos.
+.SH LICENSE
+GPL-3.0-only.

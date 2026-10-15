@@ -1,70 +1,47 @@
-# update-apt-system
-An update script for apt respositories.
+# updateself
 
-In order to use it place the update.sh to a directory.
-The program requires root access or to be run with SUDO
+Update installed system packages and common CLI tools with **updateself**, or its
+short command **updsf**. Supports macOS, major Linux package-manager families,
+FreeBSD, OpenBSD, NetBSD and Nix. Created by **G. Spanos**, licensed under GPLv3.
 
+## Get started
 
-```
-ex. sudo ./update.sh
-```
-
-In order to make update.sh excecutable, please run the following command uder the directory of the script:
-
-```
-chmod +x update.sh
-```
-
-this is a programm to update your system.
-It also checks if below packages and commands are available and issues an update to them as well
-*Flatpak
-*Snap
-*Rust
-*Composer
-*ClamAV
-
-This are the available options:
-
-```
-This is a program to update your system.
-
-It also checks if below packages and commands are available and issues an update to them as well
-Flatpak - Snap - Rust - Composer - ClamAV
-
-The program requires root permissions.
-
-./update.sh -[v|h|y|n|u]
-
-Plain parameters:
-	 -v 		 outputs version.
-	 -h 		 display this message
-	 -y 		 do not ask for updates, this is the default usage action
-	 -n 		 ask for updates
-
-Argument parameters:
-	 -u <user> 	 Specific user name to run some commands like rustup
-
-Double quotes variables
-	 --version 	 outputs version.
-	 --help 	 display this message
+```bash
+git clone https://github.com/spaniakos/update-apt-system.git
+cd update-apt-system
+bash update.sh --dry-run
+bash install.sh --user
+export PATH="$HOME/.local/bin:$PATH"
+updateself --ask
 ```
 
-The script does:
-update, upgrade, dist-upgrade, autoclean, autoremove
-Also this script update (if installed):
-Flatpak - Snap - Rust - Composer - ClamAV
+Requires Bash 3.2+; install Bash first on BSD and minimal Linux. Run as your normal
+account; privileged commands request elevation. The default skips update
+confirmations: use **--ask** to review commands or **--dry-run** to preview them.
+Missing optional tools are skipped, never installed automatically.
 
-Future Work:
+## Documentation — GitHub Wiki
 
-```
-* Consider adding updater to apt as a package
-* Consider writing a function to auto hook the updater to a crontab or create a deamon and set auto-update itervals ( Not recommended for bleeding edge systems )
-* Make the package runnable without sudo by asking sudo on the first command rather than not allowing the user to run it
-* Add More updatable packages ( Uppon request or uppon usage )
-```
+**[Open the Wiki](https://github.com/spaniakos/update-apt-system/wiki)** for full
+documentation, platform guides and troubleshooting.
 
-Known Bugs:
+| Start here | Reference and help |
+| --- | --- |
+| [Installation](https://github.com/spaniakos/update-apt-system/wiki/Installation) | [Command reference](https://github.com/spaniakos/update-apt-system/wiki/Command-Reference) |
+| [macOS](https://github.com/spaniakos/update-apt-system/wiki/macOS) | [Supported tools](https://github.com/spaniakos/update-apt-system/wiki/Supported-Tools) |
+| [Linux](https://github.com/spaniakos/update-apt-system/wiki/Linux) | [Python and pip](https://github.com/spaniakos/update-apt-system/wiki/Python-and-pip) |
+| [BSD](https://github.com/spaniakos/update-apt-system/wiki/BSD) | [Nix](https://github.com/spaniakos/update-apt-system/wiki/Nix) |
+| [Packages and releases](https://github.com/spaniakos/update-apt-system/wiki/Packages-and-Releases) | [Troubleshooting](https://github.com/spaniakos/update-apt-system/wiki/Troubleshooting) |
 
-```
-* Snap is not getting udpated, solution is know, will give some time for someone to pick up the issue and get it fixed.
-```
+The Wiki is generated from reviewed sources in this repository. Release archives
+retain their matching docs. See [documentation maintenance](docs/WIKI.md).
+Until the first Wiki publication, references are also available in [docs](docs).
+
+## Contributing and releases
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md),
+[CHANGELOG.md](CHANGELOG.md) and [LICENSE](LICENSE).
+
+CI builds downloadable packages and verifies installation/removal. Version tags
+prepare **draft GitHub Releases**. Distribution-repository submissions remain
+[future work](docs/ROADMAP.md). The existing update.sh entry point is retained.

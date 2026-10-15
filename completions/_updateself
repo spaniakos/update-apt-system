@@ -1,0 +1,18 @@
+#compdef updateself updsf
+_arguments \
+  '(-h --help)'{-h,--help}'[Show help]' \
+  '(-v --version)'{-v,--version}'[Print version]' \
+  '(-y --yes)'{-y,--yes}'[Skip confirmations]' \
+  '(-n --ask)'{-n,--ask}'[Confirm commands]' \
+  '(-u --user)'{-u,--user}'[Target user]:user:_users' \
+  '--dry-run[Preview commands]' '--cleanup[Clean after updates]' \
+  '--full-upgrade[APT dist-upgrade]' '--base-install[Install base updates]' \
+  '--apple-install[Install Apple updates]' '--greedy[Additional Homebrew casks]' \
+  '--only[Components]:list:' '--skip[Excluded components]:list:' \
+  '--include[Optional components]:list:' '--python[Python interpreter]:path:_files' \
+  '--venv[Virtual environment]:directory:_files -/' \
+  '--python-packages[Upgrade explicitly selected Python environments]' \
+  '--nix-config[Declarative config]:kind:(nixos home-manager darwin)' \
+  '--nix-flake[Local flake directory]:directory:_files -/' \
+  '--nix-update-inputs[Update selected flake inputs]' '--log[Append log]:file:_files' \
+  '--no-color[Plain output]' '--list-components[List components]'

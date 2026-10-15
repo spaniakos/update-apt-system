@@ -103,6 +103,7 @@ EOF
         tar -czf "$WORK/payload.tar.gz" -C "$WORK/root" .
         sum=$(sha512sum "$WORK/payload.tar.gz" | cut -d' ' -f1)
         cat > "$WORK/APKBUILD" <<EOF
+# Maintainer: Georgios Spanos <spaniakos@gmail.com>
 pkgname=updateself
 pkgver=$VERSION
 pkgrel=0
@@ -116,6 +117,7 @@ source='payload.tar.gz'
 package() {
   mkdir -p "\$pkgdir"
   tar -xzf "\$srcdir/payload.tar.gz" -C "\$pkgdir"
+  gzip -9 "\$pkgdir"/usr/share/man/man1/*.1
 }
 sha512sums='$sum  payload.tar.gz'
 EOF
@@ -148,8 +150,9 @@ EOF
         bashpkg=$(pkg_info -e 'bash-*' | head -n 1)
         [ -n "$bashpkg" ] || { echo 'Bash package required' >&2; exit 1; }
         pkg_create -A '*' -B "$WORK/root" -p "$PREFIX" -f "$WORK/PLIST" -d "$WORK/DESCR" \
-            -D "COMMENT=$DESCRIPTION" -D FULLPKGPATH=sysutils/updateself -D PORTSDIR=/usr/ports \
-            -P "shells/bash:bash-*:bash" "$OUT/updateself-$VERSION-openbsd-$(uname -r)-$(uname -m).tgz"
+            -D "COMMENT=$DESCRIPTION" -D MAINTAINER=spaniakos@gmail.com -D FULLPKGPATH=sysutils/updateself -D PORTSDIR=/usr/ports \
+            -P "shells/bash:bash-*:$bashpkg" "$WORK/updateself-$VERSION.tgz"
+        cp "$WORK/updateself-$VERSION.tgz" "$OUT/updateself-$VERSION-openbsd-$(uname -r)-$(uname -m).tgz"
         ;;
     netbsd)
         (cd "$WORK/root$PREFIX"; find . -type f -o -type l | sed 's|^./||' | sort) > "$WORK/PLIST"
@@ -157,7 +160,8 @@ EOF
         printf '%s\n' "$DESCRIPTION" > "$WORK/DESCR"
         printf 'OPSYS=NetBSD\nOS_VERSION=%s\nMACHINE_ARCH=%s\nPKGPATH=sysutils/updateself\nHOMEPAGE=%s\nLICENSE=gnu-gpl-v3\n' "$(uname -r)" "$(uname -p)" "$URL" > "$WORK/BUILD_INFO"
         pkg_create -p "$WORK/root$PREFIX" -I "$PREFIX" -u root -g wheel -P 'bash>=3.2' -B "$WORK/BUILD_INFO" \
-            -c "$WORK/COMMENT" -d "$WORK/DESCR" -f "$WORK/PLIST" "$OUT/updateself-$VERSION-netbsd-$(uname -r)-$(uname -m).tgz"
+            -c "$WORK/COMMENT" -d "$WORK/DESCR" -f "$WORK/PLIST" "$WORK/updateself-$VERSION.tgz"
+        cp "$WORK/updateself-$VERSION.tgz" "$OUT/updateself-$VERSION-netbsd-$(uname -r)-$(uname -m).tgz"
         ;;
     *) echo "Unknown format: $FORMAT" >&2; exit 2 ;;
 esac

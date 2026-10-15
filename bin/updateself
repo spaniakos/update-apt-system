@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# updateself — G. Spanos — GPL-3.0-only. Compatible with Bash 3.2.
+# updateself — G. Spanos. Compatible with Bash 3.2.
+# Copyright (C) 2016-2026 Georgios Spanos
+# SPDX-License-Identifier: GPL-3.0-only
+# Distributed under GNU GPL version 3, without any warranty. See LICENSE.
 set -u
 set -o pipefail
 VERSION=2.0.0

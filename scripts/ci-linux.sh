@@ -48,6 +48,7 @@ case "$FORMAT" in
         xbps-install -y --repository="$PWD/dist" updateself
         updateself --help; updsf --version; updateself --only system --dry-run
         xbps-remove -y updateself
+        rm -f dist/*-repodata
         ;;
     slackware)
         bash scripts/package.sh slackware

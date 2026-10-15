@@ -19,6 +19,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - name: Install lint tool
         run: |
           if [ "${{ runner.os }}" = Linux ]; then
@@ -55,12 +57,18 @@ jobs:
           - {format: slackware, image: 'vbatts/slackware:15.0'}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - name: Native build and install/remove
         env:
           TARGET_FORMAT: ${{ matrix.format }}
           TARGET_IMAGE: ${{ matrix.image }}
         run: |
-          docker run --rm -v "$PWD:/src" "$TARGET_IMAGE" /bin/sh -c 'command -v bash >/dev/null || apk add --no-cache bash; exec bash /src/scripts/ci-linux.sh "$1"' sh "$TARGET_FORMAT"
+          work=$(mktemp -d)
+          git archive HEAD | tar -x -C "$work"
+          docker run --rm -v "$work:/src" "$TARGET_IMAGE" /bin/sh /src/scripts/ci-container.sh "$TARGET_FORMAT"
+          mkdir -p dist
+          sudo cp -R "$work/dist/." dist/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: package-${{ matrix.format }}
@@ -75,6 +83,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - name: Build and test installer
         run: |
           /bin/bash scripts/package.sh macos
@@ -102,6 +112,8 @@ jobs:
         os: [freebsd, openbsd, netbsd]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - name: FreeBSD native build
         if: matrix.os == 'freebsd'
         uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
@@ -121,7 +133,7 @@ jobs:
         uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
         with:
           usesh: true
-          prepare: /usr/pkg/bin/pkgin -y install bash
+          prepare: /usr/sbin/pkg_add pkgin bash
           run: /usr/pkg/bin/bash scripts/ci-bsd.sh netbsd
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -134,6 +146,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - run: |
           bash scripts/package.sh portable
           python3 scripts/recipes.py dist
@@ -151,6 +165,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702
       - run: |
           nix flake lock

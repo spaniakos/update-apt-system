@@ -17,3 +17,7 @@ with untrusted PR code holding write tokens. Do not add registry publishing yet.
 
 See docs/RELEASING.md for versioning and release builds. Original project author:
 G. Spanos (spaniakos). All changes retain GPL-3.0-only.
+
+Public user documentation is published to the GitHub Wiki from reviewed sources.
+Edit docs/*.md or docs/wiki/*.md and run the Wiki tests; do not maintain a separate
+copy of managed pages by hand. See docs/WIKI.md for rendering and publication.

@@ -1,0 +1,66 @@
+name: GitHub Wiki
+on:
+  push:
+    branches: [master]
+    paths: ['docs/**', 'scripts/wiki.py', 'scripts/publish-wiki.sh', 'tests/test_wiki.py', 'README.md', 'VERSION', 'CHANGELOG.md', '.github/workflows/wiki.yml']
+  pull_request:
+    paths: ['docs/**', 'scripts/wiki.py', 'scripts/publish-wiki.sh', 'tests/test_wiki.py', 'README.md', 'VERSION', 'CHANGELOG.md', '.github/workflows/wiki.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: updateself-wiki-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Test rendering and safe synchronization
+        run: python3 -m unittest discover -s tests -p 'test_wiki.py' -v
+      - name: Render Wiki
+        env:
+          SOURCE_REF: ${{ github.sha }}
+        run: python3 scripts/wiki.py build --output build/wiki --source-ref "$SOURCE_REF"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: wiki-preview
+          path: build/wiki/*.md
+          if-no-files-found: error
+  publish:
+    needs: preview
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Render approved source revision
+        env:
+          SOURCE_REF: ${{ github.sha }}
+        run: python3 scripts/wiki.py build --output build/wiki --source-ref "$SOURCE_REF"
+      - name: Publish GitHub Wiki
+        env:
+          WIKI_AUTH_TOKEN: ${{ secrets.WIKI_TOKEN || github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_REF: ${{ github.sha }}
+        run: |
+          auth_dir=$(mktemp -d)
+          trap 'rm -rf "$auth_dir"' EXIT
+          cat > "$auth_dir/askpass" <<'SH'
+          #!/bin/sh
+          case "$1" in
+            *Username*) printf '%s\n' 'x-access-token' ;;
+            *) printf '%s\n' "$WIKI_AUTH_TOKEN" ;;
+          esac
+          SH
+          chmod 700 "$auth_dir/askpass"
+          export GIT_ASKPASS="$auth_dir/askpass"
+          export GIT_TERMINAL_PROMPT=0
+          bash scripts/publish-wiki.sh build/wiki "https://github.com/$REPOSITORY.wiki.git" "$SOURCE_REF"

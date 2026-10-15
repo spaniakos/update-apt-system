@@ -8,7 +8,7 @@ else
     echo 'ShellCheck absent; syntax checked only. CI requires ShellCheck.'
 fi
 if command -v actionlint >/dev/null 2>&1; then
-    actionlint -config-file .github/actionlint.yaml .github/workflows/ci.yml .github/workflows/release.yml
+    actionlint -config-file .github/actionlint.yaml .github/workflows/*.yml
 fi
 python3 - <<'PY'
 from pathlib import Path

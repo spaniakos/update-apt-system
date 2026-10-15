@@ -76,7 +76,7 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
-for path in "${PYTHONS[@]}" "${VENVS[@]}"; do
+for path in ${PYTHONS[@]+"${PYTHONS[@]}"} ${VENVS[@]+"${VENVS[@]}"}; do
     case "$path" in /*) : ;; *) die 'Python and venv paths must be absolute' ;; esac
  done
 if [ -n "$NIX_FLAKE" ]; then
@@ -232,51 +232,51 @@ native_updates() {
         apt)
             run root 'APT repositories' apt-get -o APT::Update::Error-Mode=any update || return
             if [ "$FULL" -eq 1 ]; then pm=dist-upgrade; else pm=upgrade; fi
-            run root 'APT packages' apt-get "$pm" "${yes[@]}" || return
+            run root 'APT packages' apt-get "$pm" ${yes[@]+"${yes[@]}"} || return
             if [ "$CLEAN" -eq 1 ]; then
-                run root 'APT unused dependencies' apt-get autoremove "${yes[@]}" || return
+                run root 'APT unused dependencies' apt-get autoremove ${yes[@]+"${yes[@]}"} || return
                 run root 'APT obsolete downloads' apt-get autoclean || return
             fi ;;
         dnf)
             pm=$(command -v dnf5 || command -v dnf || command -v yum) || { run root 'RPM package manager missing' dnf upgrade; return; }
             if [ "${pm##*/}" = yum ]; then
-                run root 'RPM packages' "$pm" update "${yes[@]}" || return
+                run root 'RPM packages' "$pm" update ${yes[@]+"${yes[@]}"} || return
             else
-                run root 'RPM packages' "$pm" upgrade --refresh "${yes[@]}" || return
+                run root 'RPM packages' "$pm" upgrade --refresh ${yes[@]+"${yes[@]}"} || return
             fi
-            if [ "$CLEAN" -eq 1 ]; then run root 'RPM unused dependencies' "$pm" autoremove "${yes[@]}" || return; fi ;;
+            if [ "$CLEAN" -eq 1 ]; then run root 'RPM unused dependencies' "$pm" autoremove ${yes[@]+"${yes[@]}"} || return; fi ;;
         pacman)
             local confirm=(); [ "$ASK" -eq 1 ] || confirm=(--noconfirm)
-            run root 'Arch complete upgrade' pacman -Syu "${confirm[@]}" || return
+            run root 'Arch complete upgrade' pacman -Syu ${confirm[@]+"${confirm[@]}"} || return
             # No automatic orphan removal or aggressive cache deletion.
             if [ "$CLEAN" -eq 1 ]; then skip 'Arch cleanup: inspect orphans/cache manually'; fi ;;
         zypper|tumbleweed)
             local zyes=(); [ "$ASK" -eq 1 ] || zyes=(--non-interactive)
-            run root 'Zypper repositories' zypper "${zyes[@]}" refresh || return
+            run root 'Zypper repositories' zypper ${zyes[@]+"${zyes[@]}"} refresh || return
             if [ "$BACKEND" = tumbleweed ]; then pm=dup; else pm=update; fi
-            run root 'Zypper packages' zypper "${zyes[@]}" "$pm" || return
+            run root 'Zypper packages' zypper ${zyes[@]+"${zyes[@]}"} "$pm" || return
             if [ "$CLEAN" -eq 1 ]; then run root 'Zypper cache' zypper clean || return; fi ;;
         apk)
             run root 'Alpine repositories' apk update || return
             run root 'Alpine packages' apk upgrade || return ;;
         xbps)
-            run root 'Void packages / XBPS bootstrap' xbps-install -Su "${yes[@]}" || return
-            run root 'Void remaining packages' xbps-install -Su "${yes[@]}" || return
-            if [ "$CLEAN" -eq 1 ]; then run root 'Void orphan packages' xbps-remove -o "${yes[@]}" || return; fi ;;
+            run root 'Void packages / XBPS bootstrap' xbps-install -Su ${yes[@]+"${yes[@]}"} || return
+            run root 'Void remaining packages' xbps-install -Su ${yes[@]+"${yes[@]}"} || return
+            if [ "$CLEAN" -eq 1 ]; then run root 'Void orphan packages' xbps-remove -o ${yes[@]+"${yes[@]}"} || return; fi ;;
         emerge)
             run root 'Gentoo repositories' emerge --sync || return
             local eask=(); [ "$ASK" -eq 0 ] || eask=(--ask)
-            run root 'Gentoo world' emerge "${eask[@]}" --update --deep --newuse @world || return
-            run root 'Gentoo preserved libraries' emerge "${eask[@]}" @preserved-rebuild || return
+            run root 'Gentoo world' emerge ${eask[@]+"${eask[@]}"} --update --deep --newuse @world || return
+            run root 'Gentoo preserved libraries' emerge ${eask[@]+"${eask[@]}"} @preserved-rebuild || return
             if [ "$CLEAN" -eq 1 ]; then skip 'Gentoo depclean requires manual review'; fi ;;
         slackpkg)
             local opts=(); [ "$ASK" -eq 1 ] || opts=(-batch=on -default_answer=y)
-            run root 'Slackware repositories' slackpkg "${opts[@]}" update || return
-            run root 'Slackware new dependencies' slackpkg "${opts[@]}" install-new || return
-            run root 'Slackware packages' slackpkg "${opts[@]}" upgrade-all || return
+            run root 'Slackware repositories' slackpkg ${opts[@]+"${opts[@]}"} update || return
+            run root 'Slackware new dependencies' slackpkg ${opts[@]+"${opts[@]}"} install-new || return
+            run root 'Slackware packages' slackpkg ${opts[@]+"${opts[@]}"} upgrade-all || return
             skip 'Slackware: review .new configuration files with slackpkg new-config' ;;
         freebsd)
-            run root 'FreeBSD packages' pkg upgrade "${yes[@]}" || return
+            run root 'FreeBSD packages' pkg upgrade ${yes[@]+"${yes[@]}"} || return
             if [ "$BASE" -eq 1 ]; then
                 # pkgbase installations are updated through their configured pkg repos.
                 if pkg info -e 'FreeBSD-runtime*' >/dev/null 2>&1; then
@@ -292,9 +292,9 @@ native_updates() {
             fi ;;
         openbsd)
             local oyes=(); [ "$ASK" -eq 1 ] || oyes=(-I)
-            run root 'OpenBSD packages' pkg_add -u "${oyes[@]}" || return
+            run root 'OpenBSD packages' pkg_add -u ${oyes[@]+"${oyes[@]}"} || return
             if [ "$BASE" -eq 1 ]; then run root 'OpenBSD base patches' syspatch || return; fi ;;
-        netbsd) run root 'NetBSD repositories' pkgin update || return; run root 'NetBSD packages' pkgin "${yes[@]}" upgrade || return ;;
+        netbsd) run root 'NetBSD repositories' pkgin update || return; run root 'NetBSD packages' pkgin ${yes[@]+"${yes[@]}"} upgrade || return ;;
         macos) skip 'macOS native updates are handled by apple/brew/macports components' ;;
         nixos) skip 'NixOS requires explicit --base-install --nix-config nixos (nix component)' ;;
         immutable) skip 'Immutable OS: native system updates unsupported; app components remain available' ;;
@@ -312,7 +312,7 @@ if enabled brew; then
             brew_ok=1
             brew_run 'Homebrew formulae' upgrade --formula || brew_ok=0
             cargs=(upgrade --cask); [ "$GREEDY" -eq 0 ] || cargs+=(--greedy)
-            if [ "$OS" = Darwin ]; then brew_run 'Homebrew casks' "${cargs[@]}" || brew_ok=0; fi
+            if [ "$OS" = Darwin ]; then brew_run 'Homebrew casks' ${cargs[@]+"${cargs[@]}"} || brew_ok=0; fi
             if [ "$CLEAN" -eq 1 ] && [ "$brew_ok" -eq 1 ]; then
                 if brew_run 'Homebrew unused dependencies' autoremove; then brew_run 'Homebrew cleanup' cleanup || :; fi
             fi
@@ -339,18 +339,18 @@ if enabled flatpak; then
     if command -v flatpak >/dev/null 2>&1; then
         fyes=(); [ "$ASK" -eq 1 ] || fyes=(-y)
         # --system covers the default installation; enumerate named system installations too.
-        if run root 'Flatpak system' flatpak update --system "${fyes[@]}"; then
-            if [ "$CLEAN" -eq 1 ]; then run root 'Flatpak system unused runtimes' flatpak uninstall --system --unused "${fyes[@]}" || :; fi
+        if run root 'Flatpak system' flatpak update --system ${fyes[@]+"${fyes[@]}"}; then
+            if [ "$CLEAN" -eq 1 ]; then run root 'Flatpak system unused runtimes' flatpak uninstall --system --unused ${fyes[@]+"${fyes[@]}"} || :; fi
         fi
         while IFS= read -r installation; do
             [ -n "$installation" ] || continue
-            if run root "Flatpak installation $installation" flatpak update "--installation=$installation" "${fyes[@]}"; then
-                if [ "$CLEAN" -eq 1 ]; then run root 'Flatpak unused runtimes' flatpak uninstall "--installation=$installation" --unused "${fyes[@]}" || :; fi
+            if run root "Flatpak installation $installation" flatpak update "--installation=$installation" ${fyes[@]+"${fyes[@]}"}; then
+                if [ "$CLEAN" -eq 1 ]; then run root 'Flatpak unused runtimes' flatpak uninstall "--installation=$installation" --unused ${fyes[@]+"${fyes[@]}"} || :; fi
             fi
         done < <(awk '/^\[Installation "/ {sub(/^\[Installation "/, ""); sub(/"\].*$/, ""); print}' /etc/flatpak/installations.d/*.conf 2>/dev/null)
         if [ "$TARGET" != root ]; then
-            if run user 'Flatpak user' flatpak update --user "${fyes[@]}"; then
-                if [ "$CLEAN" -eq 1 ]; then run user 'Flatpak user unused runtimes' flatpak uninstall --user --unused "${fyes[@]}" || :; fi
+            if run user 'Flatpak user' flatpak update --user ${fyes[@]+"${fyes[@]}"}; then
+                if [ "$CLEAN" -eq 1 ]; then run user 'Flatpak user unused runtimes' flatpak uninstall --user --unused ${fyes[@]+"${fyes[@]}"} || :; fi
             fi
         fi
     else skip 'Flatpak not installed'; fi
@@ -430,16 +430,16 @@ fi
 python_updates() {
     [ "$TARGET" != root ] || { skip 'Python discovery needs a non-root target user'; return; }
     local py path record real marker venv owner explicit packages package status
-    local seen='|' discovered=("${PYTHONS[@]}")
-    for path in "${VENVS[@]}"; do discovered+=("$path/bin/python"); done
+    local seen='|' discovered=(${PYTHONS[@]+"${PYTHONS[@]}"})
+    for path in ${VENVS[@]+"${VENVS[@]}"}; do discovered+=("$path/bin/python"); done
     # Discover PATH interpreters only; never scan disks for environments.
     for py in python python3 python3.8 python3.9 python3.10 python3.11 python3.12 python3.13 python3.14 python3.15; do
         path=$(user_command "$py" || true); [ -z "$path" ] || discovered+=("$path")
     done
-    for path in "${discovered[@]}"; do
+    for path in ${discovered[@]+"${discovered[@]}"}; do
         explicit=0
-        for py in "${PYTHONS[@]}"; do [ "$path" != "$py" ] || explicit=1; done
-        for py in "${VENVS[@]}"; do [ "$path" != "$py/bin/python" ] || explicit=1; done
+        for py in ${PYTHONS[@]+"${PYTHONS[@]}"}; do [ "$path" != "$py" ] || explicit=1; done
+        for py in ${VENVS[@]+"${VENVS[@]}"}; do [ "$path" != "$py/bin/python" ] || explicit=1; done
         if [ ! -x "$path" ]; then
             FAILED=$((FAILED + 1)); FAILURES+=("Python executable missing: $path"); continue
         fi
@@ -466,27 +466,33 @@ python_updates() {
             if [ "$status" -ne 0 ]; then FAILED=$((FAILED + 1)); FAILURES+=("Cannot list pip packages: $path"); continue; fi
             local names=()
             while IFS= read -r package; do [ -z "$package" ] || names+=("$package"); done <<< "$packages"
-            if [ "${#names[@]}" -gt 0 ]; then run user "Python packages for $path (may change major versions)" "$path" -I -m pip install --upgrade "${names[@]}" || :; fi
+            if [ "${#names[@]}" -gt 0 ]; then run user "Python packages for $path (may change major versions)" "$path" -I -m pip install --upgrade ${names[@]+"${names[@]}"} || :; fi
         fi
     done
 }
 if enabled python; then python_updates; fi
 
 if enabled nix; then
-    nix=$(user_command nix || true)
+    nix_scope=user
+    if [ "$TARGET" = root ] && [ -n "$NIX_CONFIG" ]; then
+        nix=$(command -v nix || true)
+        nix_scope=root
+    else
+        nix=$(user_command nix || true)
+    fi
     if [ -n "$nix" ]; then
         if [ -n "$NIX_CONFIG" ]; then
             cfg_ok=1
             if [ -n "$NIX_FLAKE" ]; then
                 [ -d "$NIX_FLAKE" ] && [ -f "$NIX_FLAKE/flake.nix" ] || die 'Nix flake must be a local directory containing flake.nix'
-                if [ "$NIX_INPUTS" -eq 1 ]; then run user 'Nix configuration inputs' "$nix" flake update --flake "$NIX_FLAKE" || cfg_ok=0; fi
+                if [ "$NIX_INPUTS" -eq 1 ]; then run "$nix_scope" 'Nix configuration inputs' "$nix" flake update --flake "$NIX_FLAKE" || cfg_ok=0; fi
             fi
             if [ "$cfg_ok" -eq 1 ]; then
                 nargs=(); [ -z "$NIX_FLAKE" ] || nargs=(--flake "$NIX_FLAKE")
                 case "$NIX_CONFIG" in
-                    nixos) run root 'NixOS rebuild' nixos-rebuild switch "${nargs[@]}" || : ;;
-                    home-manager) run user 'Home Manager activation' home-manager switch "${nargs[@]}" || : ;;
-                    darwin) run root 'nix-darwin rebuild' darwin-rebuild switch "${nargs[@]}" || : ;;
+                    nixos) run root 'NixOS rebuild' nixos-rebuild switch ${nargs[@]+"${nargs[@]}"} || : ;;
+                    home-manager) run user 'Home Manager activation' home-manager switch ${nargs[@]+"${nargs[@]}"} || : ;;
+                    darwin) run root 'nix-darwin rebuild' darwin-rebuild switch ${nargs[@]+"${nargs[@]}"} || : ;;
                 esac
             fi
         elif as_user "$nix" profile list >/dev/null 2>&1; then
@@ -514,12 +520,12 @@ if enabled aur; then
         helper=$(user_command paru || user_command yay || true)
         if [ -n "$helper" ]; then
             aargs=(-Syu); [ "$ASK" -eq 1 ] || aargs+=(--noconfirm)
-            if [ "$FAILED" -eq 0 ]; then run user 'AUR applications' "$helper" "${aargs[@]}" || :; else skip 'AUR skipped after earlier failure'; fi
+            if [ "$FAILED" -eq 0 ]; then run user 'AUR applications' "$helper" ${aargs[@]+"${aargs[@]}"} || :; else skip 'AUR skipped after earlier failure'; fi
         else skip 'AUR helper not installed'; fi
     else skip 'AUR requires an Arch-based system'; fi
 fi
 if [ -e /var/run/reboot-required ]; then printf '\n[NOTICE] System reports a restart is required.\n'; fi
 printf '\nFinished: %s | completed commands=%s | skipped=%s | failed=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "$OK" "$SKIPPED" "$FAILED"
 [ "$DRY" -eq 0 ] || printf 'Preview only: no update commands executed.\n'
-if [ "$FAILED" -gt 0 ]; then printf 'Failures:\n'; printf '  %s\n' "${FAILURES[@]}"; exit 1; fi
+if [ "$FAILED" -gt 0 ]; then printf 'Failures:\n'; printf '  %s\n' ${FAILURES[@]+"${FAILURES[@]}"}; exit 1; fi
 exit 0

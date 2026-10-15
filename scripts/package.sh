@@ -155,7 +155,8 @@ EOF
         pkg_create -A '*' -B "$WORK/root" -p "$PREFIX" -f "$WORK/PLIST" -d "$WORK/DESCR" \
             -D "COMMENT=$DESCRIPTION" -D MAINTAINER=spaniakos@gmail.com -D FULLPKGPATH=sysutils/updateself -D PORTSDIR=/usr/ports \
             -P "shells/bash:bash-*:$bashpkg" "$WORK/updateself-$VERSION.tgz"
-        cp "$WORK/updateself-$VERSION.tgz" "$OUT/updateself-$VERSION-openbsd-$(uname -r)-$(uname -m).tgz"
+        # OpenBSD checks the archive basename against @name during installation.
+        cp "$WORK/updateself-$VERSION.tgz" "$OUT/updateself-$VERSION.tgz"
         ;;
     netbsd)
         (cd "$WORK/root$PREFIX"; find . -type f -o -type l | sed 's|^./||' | sort) > "$WORK/PLIST"

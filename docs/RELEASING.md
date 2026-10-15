@@ -33,7 +33,8 @@ build dependencies; review their updates. No production machine is a CI target.
 | Homebrew/MacPorts/Gentoo | release-specific source recipes | generated metadata, no upstream submission |
 
 RPMs built on Fedora are not a blanket certification for all RHEL/SUSE versions.
-BSD artifacts are labelled by their target OS to avoid identical .tgz filenames.
+NetBSD/FreeBSD artifacts are labelled by their target OS. OpenBSD's .tgz retains
+its canonical updateself-VERSION.tgz name because pkg_add validates that basename.
 No unsigned package should be represented as distro-signed. The macOS pkg is
 unsigned; Developer ID/notarization is future work. Alpine's disposable signing
 key establishes a CI install test only, not a stable public trust identity.

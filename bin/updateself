@@ -281,10 +281,18 @@ native_updates() {
             run root 'Slackware packages' slackpkg ${opts[@]+"${opts[@]}"} upgrade-all || return
             skip 'Slackware: review .new configuration files with slackpkg new-config' ;;
         freebsd)
+            # A pkgbase repository can make plain pkg upgrade update the OS too.
+            # Do not silently cross the explicit base-install boundary.
+            local pkgbase=0
+            if pkg info -e 'FreeBSD-runtime*' >/dev/null 2>&1; then pkgbase=1; fi
+            if [ "$pkgbase" -eq 1 ] && [ "$BASE" -eq 0 ]; then
+                skip 'FreeBSD pkgbase: use --base-install for the combined package/base transaction'
+                return 0
+            fi
             run root 'FreeBSD packages' pkg upgrade ${yes[@]+"${yes[@]}"} || return
             if [ "$BASE" -eq 1 ]; then
                 # pkgbase installations are updated through their configured pkg repos.
-                if pkg info -e 'FreeBSD-runtime*' >/dev/null 2>&1; then
+                if [ "$pkgbase" -eq 1 ]; then
                     skip 'FreeBSD pkgbase is handled by pkg upgrade'
                 elif [ "$(sysctl -n security.jail.jailed 2>/dev/null)" = 1 ]; then
                     skip 'FreeBSD base patches inside a jail are not supported'

@@ -33,9 +33,10 @@ case "$FORMAT" in
         addgroup builder abuild
         printf 'builder ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/builder
         chown -R builder:builder /src
-        su builder -c 'abuild-keygen -a -n; cd /src; bash scripts/package.sh apk'
+        su builder -c 'abuild-keygen -a -n'
         # Ephemeral CI key only: do not install it on users' systems.
         cp /home/builder/.abuild/*.pub /etc/apk/keys/
+        su builder -c 'cd /src; bash scripts/package.sh apk'
         apk add ./dist/updateself-*.apk
         updateself --help; updsf --version; updateself --only system --dry-run
         apk del updateself

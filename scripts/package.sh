@@ -19,7 +19,7 @@ URL=https://github.com/spaniakos/update-apt-system
 case "$FORMAT" in
     portable)
         mkdir "$WORK/updateself-$VERSION"
-        for item in bin docs completions man scripts packaging tests .github flake.nix install.sh update.sh Makefile README.md VERSION LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md; do
+        for item in bin docs completions man scripts packaging tests .github flake.nix flake.lock install.sh update.sh Makefile README.md VERSION LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md; do
             cp -R "$ROOT/$item" "$WORK/updateself-$VERSION/"
         done
         find "$WORK/updateself-$VERSION" -type d -name __pycache__ -prune -exec rm -rf {} +
@@ -125,7 +125,7 @@ EOF
         find "$WORK/packages" -name 'updateself-*.apk' -exec cp {} "$OUT/" \;
         ;;
     xbps)
-        (cd "$OUT"; xbps-create -A noarch -n "updateself-${VERSION}_1" -s "$DESCRIPTION" -l GPL-3.0-only -m 'Georgios Spanos <spaniakos@gmail.com>' -D bash "$WORK/root")
+        (cd "$OUT"; xbps-create -A noarch -n "updateself-${VERSION}_1" -s "$DESCRIPTION" -l GPL-3.0-only -m 'Georgios Spanos <spaniakos@gmail.com>' -D 'bash>=3.2' "$WORK/root")
         ;;
     slackware)
         mkdir -p "$WORK/root/install"
@@ -147,7 +147,10 @@ EOF
     openbsd)
         (cd "$WORK/root$PREFIX"; find . -type f -o -type l | sed 's|^./||' | sort) > "$WORK/PLIST"
         printf '%s\n' "$DESCRIPTION" > "$WORK/DESCR"
-        bashpkg=$(pkg_info -e 'bash-*' | head -n 1)
+        bashpkg=''
+        for candidate in /var/db/pkg/bash-[0-9]*; do
+            if [ -d "$candidate" ]; then bashpkg=${candidate##*/}; break; fi
+        done
         [ -n "$bashpkg" ] || { echo 'Bash package required' >&2; exit 1; }
         pkg_create -A '*' -B "$WORK/root" -p "$PREFIX" -f "$WORK/PLIST" -d "$WORK/DESCR" \
             -D "COMMENT=$DESCRIPTION" -D MAINTAINER=spaniakos@gmail.com -D FULLPKGPATH=sysutils/updateself -D PORTSDIR=/usr/ports \

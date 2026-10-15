@@ -2,7 +2,7 @@
 
 ## Triggers
 
-- Pull requests and branch pushes: syntax, ShellCheck, unit/installer tests,
+- Pull requests and pushes to master: syntax, ShellCheck, unit/installer tests,
   package generation and disposable installation/removal checks.
 - Manual workflow dispatch: the same build matrix, downloadable workflow artifacts.
 - `vX.Y.Z` tag: require VERSION/runtime/man consistency, run checks/builds, collect
@@ -54,10 +54,10 @@ ownership manifest for native packages, and never executes updates. Build in a
 disposable target OS. scripts/ci-linux.sh and ci-bsd.sh intentionally install/remove
 packages and must ONLY be used inside disposable CI machines.
 
-Nix CI generates flake.lock as an artifact, builds against that exact input and
-includes the lock in the recipe bundle. Commit an audited lock before relying on
-bit-for-bit reproduction across separate runs. Checksums record artifact integrity;
-they do not assert deterministic binaries. Builder images/actions must also be
+Nix input is pinned in the committed flake.lock, taken from a passing Nix build.
+CI refuses implicit lock updates and includes that lock in the recipe bundle.
+Checksums record artifact integrity; they do not assert deterministic binaries.
+Builder images/actions must also be
 pinned by digest for fully reproducible infrastructure (future hardening).
 
 ## Preparing a version

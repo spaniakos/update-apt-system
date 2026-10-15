@@ -46,6 +46,9 @@ class RuntimeTests(unittest.TestCase):
         if body is None:
             body = '''
 case "$*" in *'--version'*|*'profile list'*) exit 0;; esac
+if [ "${0##*/}" = pkg ] && [ "$1" = info ]; then
+    [ "${TEST_PKGBASE:-0}" = 1 ]; exit $?
+fi
 printf '%s' "${0##*/}" >> "$TEST_LOG"
 printf ' %s' "$@" >> "$TEST_LOG"
 printf '\\n' >> "$TEST_LOG"
@@ -235,6 +238,16 @@ esac
         p, c = self.run_script('--only', 'bun')
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertEqual(c, ['bun upgrade'])
+
+    def test_freebsd_pkgbase_requires_explicit_base_opt_in(self):
+        self.env.update(TEST_OS='FreeBSD', TEST_PKGBASE='1')
+        self.stub('pkg')
+        p, c = self.run_script('--only', 'system')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(c, [])
+        p, c = self.run_script('--only', 'system', '--base-install')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('pkg upgrade -y', c)
 
 
 class InstallerTests(unittest.TestCase):

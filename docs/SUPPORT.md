@@ -29,7 +29,9 @@ every update on arbitrary production systems. Consult the actual workflow run.
   mirror, pin, hold, release branch or trust-key changes are made.
 - BSD and minimal Linux require Bash installed first. sudo, doas or root provides
   native administrative access. Switching from root to another user needs sudo/runuser.
-- FreeBSD base updates skip jails and non-GENERIC kernels. No base-package migration.
+- Traditional FreeBSD base updates skip jails and non-GENERIC kernels. No base-package migration.
+  On detected pkgbase installations, the combined pkg upgrade transaction needs
+  --base-install; it is skipped otherwise because it can also update the base OS.
 - Nix profile CLI capability is checked at runtime. Locked flake references remain
   pinned; legacy nix-env uses the selected user's configured channels. No daemon
   self-upgrade, channel switching or generation deletion.

@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: ['**']
+    branches: [master]
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -169,9 +169,7 @@ jobs:
           persist-credentials: false
       - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702
       - run: |
-          nix flake lock
-          git add flake.lock
-          nix build
+          nix build --no-update-lock-file
           ./result/bin/updateself --help
           ./result/bin/updsf --version
           mkdir -p dist

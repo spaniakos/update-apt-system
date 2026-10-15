@@ -5,6 +5,8 @@ ROOT=$(cd "$(dirname "$0")" && pwd)
 PREFIX="$HOME/.local"
 DESTDIR=${DESTDIR:-}
 SHORT=1 REMOVE=0 MODE=user
+MAN_SUBDIR=share/man
+case "$(uname -s)" in OpenBSD|NetBSD) MAN_SUBDIR=man ;; esac
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --user) PREFIX="$HOME/.local"; MODE=user ;;
@@ -38,7 +40,7 @@ owned() {
     [ "$expected" = "$current" ]
 }
 # Fixed file list prevents tampered manifest paths from directing removals.
-FILES=(bin/updateself share/man/man1/updateself.1 share/man/man1/updsf.1 share/bash-completion/completions/updateself share/zsh/site-functions/_updateself share/updateself/LICENSE share/updateself/README.md)
+FILES=(bin/updateself "$MAN_SUBDIR/man1/updateself.1" "$MAN_SUBDIR/man1/updsf.1" share/bash-completion/completions/updateself share/zsh/site-functions/_updateself share/updateself/LICENSE share/updateself/README.md)
 if [ "$REMOVE" -eq 1 ]; then
     [ -f "$MANIFEST" ] || { echo 'No Git/archive installation manifest found; use the package manager for packaged installations.' >&2; exit 1; }
     retained=0
@@ -68,7 +70,7 @@ if [ "$SHORT" -eq 1 ]; then
         fi
     fi
 fi
-mkdir -p "$BASE/bin" "$BASE/share/man/man1" "$BASE/share/bash-completion/completions" "$BASE/share/zsh/site-functions" "$BASE/share/updateself"
+mkdir -p "$BASE/bin" "$BASE/$MAN_SUBDIR/man1" "$BASE/share/bash-completion/completions" "$BASE/share/zsh/site-functions" "$BASE/share/updateself"
 TMP=$(mktemp "$BASE/share/updateself/.manifest.XXXXXX")
 trap 'rm -f "$TMP"' EXIT
 install_file() {
@@ -77,8 +79,8 @@ install_file() {
     printf '%s|%s\n' "$(fingerprint "$BASE/$rel")" "$rel" >> "$TMP"
 }
 install_file bin/updateself bin/updateself 755
-install_file man/updateself.1 share/man/man1/updateself.1 644
-install_file man/updsf.1 share/man/man1/updsf.1 644
+install_file man/updateself.1 "$MAN_SUBDIR/man1/updateself.1" 644
+install_file man/updsf.1 "$MAN_SUBDIR/man1/updsf.1" 644
 install_file completions/updateself.bash share/bash-completion/completions/updateself 644
 install_file completions/_updateself share/zsh/site-functions/_updateself 644
 install_file LICENSE share/updateself/LICENSE 644

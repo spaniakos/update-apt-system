@@ -288,6 +288,22 @@ class InstallerTests(unittest.TestCase):
         self.install("--uninstall")
         self.assertEqual(main.read_text(), "modified")
 
+    def test_bsd_manual_directory(self):
+        shim = self.stage / 'shims'
+        shim.mkdir()
+        uname = shim / 'uname'
+        uname.write_text('#!/bin/sh\necho OpenBSD\n')
+        uname.chmod(0o755)
+        env = dict(os.environ, PATH=str(shim) + ':' + os.environ['PATH'])
+        cmd = [os.environ.get('BASH_BIN', 'bash'), str(ROOT / 'install.sh'),
+               '--system', '--prefix', '/usr/local', '--destdir', str(self.stage)]
+        p = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue((self.base / 'man/man1/updateself.1').is_file())
+        p = subprocess.run(cmd + ['--uninstall'], env=env, capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertFalse((self.base / 'man/man1/updateself.1').exists())
+
 
 if __name__ == "__main__":
     unittest.main()

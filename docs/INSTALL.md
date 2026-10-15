@@ -89,6 +89,7 @@ fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
 autoload -Uz compinit && compinit
 ```
 
-Man pages live under `share/man/man1`. Custom prefixes may require MANPATH.
+Man pages live under `share/man/man1` (`man/man1` on OpenBSD/NetBSD).
+Custom prefixes may require MANPATH.
 The updater has no automatic background task. Schedule it yourself only after
 reviewing authentication and unattended behaviour in the troubleshooting guide.

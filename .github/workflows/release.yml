@@ -1,0 +1,62 @@
+name: Release packages
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Require matching release tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          test "$REF_TYPE" = tag
+          test "$REF_NAME" = "v$(cat VERSION)"
+  build:
+    needs: validate-tag
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+  draft-release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: package-*
+          path: collected
+      - name: Collect unique assets
+        run: |
+          mkdir dist
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          out = Path("dist")
+          for p in Path("collected").rglob("*"):
+              if not p.is_file() or p.name == "SHA256SUMS":
+                  continue
+              target = out / p.name
+              if target.exists():
+                  raise SystemExit(f"Duplicate release asset: {p.name}")
+              shutil.copy2(p, target)
+          PY
+          python3 scripts/checksums.py dist
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: dist/*
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" dist/* --draft --verify-tag --generate-notes --title "updateself $TAG"

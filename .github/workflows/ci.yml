@@ -1,0 +1,160 @@
+name: CI
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install lint tool
+        run: |
+          if [ "${{ runner.os }}" = Linux ]; then
+            sudo apt-get update
+            sudo apt-get install -y shellcheck
+          else
+            brew install shellcheck
+          fi
+      - name: Syntax and metadata
+        run: /bin/bash scripts/check.sh
+      - name: Tests including installer
+        env:
+          BASH_BIN: /bin/bash
+        run: python3 -m unittest discover -s tests -v
+
+  linux-packages:
+    needs: checks
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {format: deb, image: 'debian:bookworm'}
+          - {format: rpm, image: 'fedora:43'}
+          - {format: arch, image: 'archlinux:base-devel'}
+          - {format: apk, image: 'alpine:3.22'}
+          - {format: xbps, image: 'ghcr.io/void-linux/void-glibc-full:latest'}
+          - {format: slackware, image: 'vbatts/slackware:15.0'}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Native build and install/remove
+        env:
+          TARGET_FORMAT: ${{ matrix.format }}
+          TARGET_IMAGE: ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$PWD:/src" "$TARGET_IMAGE" /bin/sh -c 'command -v bash >/dev/null || apk add --no-cache bash; exec bash /src/scripts/ci-linux.sh "$1"' sh "$TARGET_FORMAT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: package-${{ matrix.format }}
+          path: dist/*
+          if-no-files-found: error
+
+  macos-package:
+    needs: checks
+    strategy:
+      matrix:
+        os: [macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Build and test installer
+        run: |
+          /bin/bash scripts/package.sh macos
+          sudo installer -pkg dist/updateself-*-macos-*.pkg -target /
+          /usr/local/bin/updateself --help
+          /usr/local/bin/updsf --version
+          /usr/local/bin/updateself --only apple --dry-run
+          sudo rm /usr/local/bin/updsf /usr/local/bin/updateself
+          sudo rm /usr/local/share/man/man1/updateself.1 /usr/local/share/man/man1/updsf.1
+          sudo rm /usr/local/share/bash-completion/completions/updateself /usr/local/share/zsh/site-functions/_updateself
+          sudo rm /usr/local/share/updateself/LICENSE /usr/local/share/updateself/README.md
+          sudo pkgutil --forget gr.makeasite.updateself
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: package-macos-${{ matrix.os }}
+          path: dist/*.pkg
+          if-no-files-found: error
+
+  bsd-packages:
+    needs: checks
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [freebsd, openbsd, netbsd]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: FreeBSD native build
+        if: matrix.os == 'freebsd'
+        uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
+        with:
+          usesh: true
+          prepare: pkg install -y bash python3
+          run: bash scripts/ci-bsd.sh freebsd
+      - name: OpenBSD native build
+        if: matrix.os == 'openbsd'
+        uses: vmactions/openbsd-vm@5f7b2c933b8846a138361d6843c52af4bef5d945
+        with:
+          usesh: true
+          prepare: pkg_add bash
+          run: /usr/local/bin/bash scripts/ci-bsd.sh openbsd
+      - name: NetBSD native build
+        if: matrix.os == 'netbsd'
+        uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
+        with:
+          usesh: true
+          prepare: /usr/pkg/bin/pkgin -y install bash
+          run: /usr/pkg/bin/bash scripts/ci-bsd.sh netbsd
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: package-${{ matrix.os }}
+          path: dist/*
+          if-no-files-found: error
+
+  portable-recipes:
+    needs: checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: |
+          bash scripts/package.sh portable
+          python3 scripts/recipes.py dist
+          python3 scripts/checksums.py dist
+          bash -n dist/*.ebuild
+          ruby -c dist/updateself.rb
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: package-portable-recipes
+          path: dist/*
+          if-no-files-found: error
+
+  nix:
+    needs: checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702
+      - run: |
+          nix flake lock
+          nix build
+          ./result/bin/updateself --help
+          ./result/bin/updsf --version
+          mkdir -p dist
+          cp flake.nix flake.lock dist/
+          nix path-info --json ./result > dist/nix-build.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: package-nix
+          path: dist/*
+          if-no-files-found: error

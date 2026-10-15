@@ -1,0 +1,525 @@
+#!/usr/bin/env bash
+# updateself — G. Spanos — GPL-3.0-only. Compatible with Bash 3.2.
+set -u
+set -o pipefail
+VERSION=2.0.0
+ASK=0 DRY=0 CLEAN=0 FULL=0 BASE=0 GREEDY=0 PY_PACKAGES=0 NIX_INPUTS=0
+ONLY='' SKIP='' INCLUDE='' TARGET='' LOG='' NIX_CONFIG='' NIX_FLAKE=''
+PYTHONS=() VENVS=() FAILURES=()
+OK=0 FAILED=0 SKIPPED=0 LOCK='' TARGET_HOME='' USER_PATH=''
+COMPONENTS='system,brew,macports,apple,mas,snap,flatpak,rust,composer,clamav,uv,pipx,python,bun,deno,poetry,rclone,yt-dlp,nix,npm,cargo,aur'
+
+usage() {
+    cat <<'EOF'
+updateself 2.0.0 — update installed systems and CLI tools
+Usage: updateself [options] (updsf is the same command)
+  -h, --help                 Show help (no privileges required)
+  -v, --version              Print version
+  -y, --yes                  Skip script/package confirmations (default)
+  -n, --ask                  Confirm every update command
+  -u, --user USER            User for user-owned tools (default: invoking user)
+      --dry-run              Print commands; do not invoke update tools
+      --only LIST            Only comma-separated components
+      --skip LIST            Exclude components (takes precedence)
+      --include LIST         Enable optional npm,cargo,aur components
+      --cleanup              Backend-specific cleanup after successful updates
+      --full-upgrade         Allow APT dist-upgrade instead of upgrade
+      --base-install         Enable Apple/BSD base patches or declarative rebuild
+      --apple-install        Alias for --base-install
+      --greedy               Include latest/self-updating Homebrew casks
+      --python PATH          Inspect an additional interpreter (repeatable)
+      --venv PATH            Explicit venv whose pip can be updated (repeatable)
+      --python-packages      Upgrade listed pip packages in explicit --python/--venv
+      --nix-config KIND      nixos,home-manager,darwin (requires --base-install)
+      --nix-flake PATH       Explicit local flake directory for declarative config
+      --nix-update-inputs    Update that directory's flake.lock (explicit opt-in)
+      --log FILE             Append output to a log
+      --no-color            Accepted; output is always plain text
+      --list-components      List component identifiers
+
+Components: system,brew,macports,apple,mas,snap,flatpak,rust,composer,clamav,
+uv,pipx,python,bun,deno,poetry,rclone,yt-dlp,nix,npm,cargo,aur.
+--only also enables explicitly listed optional components.
+Run without sudo normally; root Linux/BSD system-only operation is supported.
+User tools are skipped for root unless a non-root --user/SUDO_USER is available.
+Missing tools are skipped, never installed. No reboot or release migration.
+Apple --base-install installs ALL applicable updates, possibly a major upgrade.
+--yes does not bypass authentication or vendor prompts. Unattended sudo uses -n.
+Dry-run permits read-only discovery, Python inspection and ownership queries;
+it does not refresh repositories, fetch versions, write locks or run updaters.
+Exit: 0 completed/skipped/preview; 1 update failure; 2 usage/environment error;
+      75 another invocation owns the lock; 130 interrupted; 143 terminated.
+EOF
+}
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 2; }
+need_value() { [ "$#" -ge 2 ] && [ -n "$2" ] && [ "${2#--}" = "$2" ] || die "$1 requires a value"; }
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        -v|--version) printf '%s\n' "$VERSION"; exit 0 ;;
+        -y|--yes) ASK=0 ;; -n|--ask) ASK=1 ;;
+        --dry-run) DRY=1 ;; --cleanup) CLEAN=1 ;; --full-upgrade) FULL=1 ;;
+        --base-install|--apple-install) BASE=1 ;; --greedy) GREEDY=1 ;;
+        --python-packages) PY_PACKAGES=1 ;; --nix-update-inputs) NIX_INPUTS=1 ;;
+        --no-color) : ;;
+        --list-components) printf '%s\n' "$COMPONENTS"; exit 0 ;;
+        -u|--user) need_value "$@"; TARGET=$2; shift ;;
+        --only) need_value "$@"; ONLY=$2; shift ;;
+        --skip) need_value "$@"; SKIP=$2; shift ;;
+        --include) need_value "$@"; INCLUDE=$2; shift ;;
+        --log) need_value "$@"; LOG=$2; shift ;;
+        --python) need_value "$@"; PYTHONS+=("$2"); shift ;;
+        --venv) need_value "$@"; VENVS+=("$2"); shift ;;
+        --nix-config) need_value "$@"; NIX_CONFIG=$2; shift ;;
+        --nix-flake) need_value "$@"; NIX_FLAKE=$2; shift ;;
+        *) die "Unknown argument: $1 (see --help)" ;;
+    esac
+    shift
+done
+for path in "${PYTHONS[@]}" "${VENVS[@]}"; do
+    case "$path" in /*) : ;; *) die 'Python and venv paths must be absolute' ;; esac
+ done
+if [ -n "$NIX_FLAKE" ]; then
+    [ -d "$NIX_FLAKE" ] && [ -f "$NIX_FLAKE/flake.nix" ] || die 'Nix flake must contain flake.nix'
+fi
+contains() { case ",$1," in *",$2,"*) return 0 ;; *) return 1 ;; esac; }
+validate_list() {
+    local rest="$1" item
+    [ -z "$rest" ] && return 0
+    case "$rest" in ,*|*,|*,,*) die 'Empty component in list' ;; esac
+    while [ -n "$rest" ]; do
+        item=${rest%%,*}
+        contains "$COMPONENTS" "$item" || die "Unknown component: $item"
+        if [ "$rest" = "$item" ]; then break; fi
+        rest=${rest#*,}
+    done
+}
+validate_list "$ONLY"; validate_list "$SKIP"; validate_list "$INCLUDE"
+if [ -n "$NIX_CONFIG" ]; then
+    case "$NIX_CONFIG" in nixos|home-manager|darwin) : ;; *) die 'Invalid --nix-config' ;; esac
+    [ "$BASE" -eq 1 ] || die '--nix-config requires --base-install'
+fi
+if [ "$NIX_INPUTS" -eq 1 ]; then
+    [ -n "$NIX_CONFIG" ] && [ -n "$NIX_FLAKE" ] || die '--nix-update-inputs requires --nix-config and --nix-flake'
+fi
+[ -z "$NIX_FLAKE" ] || [ -n "$NIX_CONFIG" ] || die '--nix-flake requires --nix-config'
+if [ "$PY_PACKAGES" -eq 1 ] && [ "${#PYTHONS[@]}" -eq 0 ] && [ "${#VENVS[@]}" -eq 0 ]; then
+    die '--python-packages requires an explicit --python or --venv'
+fi
+if [ "$ASK" -eq 1 ] && [ "$DRY" -eq 0 ] && [ ! -t 0 ]; then die '--ask requires a terminal'; fi
+if [ -n "$LOG" ]; then
+    [ "$DRY" -eq 0 ] || die '--log cannot be combined with --dry-run (no file writes)'
+    # Noclobber new logs; reject symlinks and non-regular files.
+    [ ! -L "$LOG" ] || die 'Log must not be a symlink'
+    if [ ! -e "$LOG" ]; then (set -C; : > "$LOG") || die 'Cannot create log'; fi
+    [ -f "$LOG" ] && [ -w "$LOG" ] || die 'Log must be a writable regular file'
+    exec >> "$LOG" 2>&1
+fi
+TARGET=${TARGET:-${SUDO_USER:-$(id -un)}}
+case "$TARGET" in -*|*/*|*:*|'') die 'Invalid target user' ;; esac
+id "$TARGET" >/dev/null 2>&1 || die "Unknown user: $TARGET"
+CURRENT=$(id -un)
+if [ "$EUID" -ne 0 ] && [ "$TARGET" != "$CURRENT" ]; then die '--user requires root when selecting another account'; fi
+if [ "$TARGET" = "$CURRENT" ]; then
+    TARGET_HOME=$HOME
+else
+    if command -v getent >/dev/null 2>&1; then
+        TARGET_HOME=$(getent passwd "$TARGET" | cut -d: -f6)
+    elif command -v dscl >/dev/null 2>&1; then
+        TARGET_HOME=$(dscl . -read "/Users/$TARGET" NFSHomeDirectory | sed 's/^NFSHomeDirectory: //')
+    else
+        TARGET_HOME=$(awk -F: -v u="$TARGET" '$1==u {print $6}' /etc/passwd)
+    fi
+fi
+[ -n "$TARGET_HOME" ] && [ -d "$TARGET_HOME" ] || die 'Cannot resolve target home'
+# Existing user PATH takes priority. Never prepend a different user's directories
+# to the privileged process PATH; only pass them into that user's process.
+USER_PATH="$TARGET_HOME/.local/bin:$TARGET_HOME/.cargo/bin:$TARGET_HOME/.bun/bin:$TARGET_HOME/.deno/bin:$TARGET_HOME/.nix-profile/bin:/opt/homebrew/bin:/usr/local/bin:/usr/pkg/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+[ "$TARGET" != "$CURRENT" ] || USER_PATH="$PATH:$USER_PATH"
+as_user() {
+    if [ "$TARGET" = "$CURRENT" ]; then
+        env PATH="$USER_PATH" "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo -n -H -u "$TARGET" -- env PATH="$USER_PATH" "$@"
+    elif command -v runuser >/dev/null 2>&1; then
+        runuser -u "$TARGET" -- env HOME="$TARGET_HOME" PATH="$USER_PATH" "$@"
+    else
+        printf 'Cannot switch user: install sudo or runuser, or run as that user.\n' >&2
+        return 1
+    fi
+}
+user_command() { [ "$TARGET" != root ] && as_user sh -c 'command -v "$1"' sh "$1" 2>/dev/null; }
+enabled() {
+    contains "$SKIP" "$1" && return 1
+    if [ -n "$ONLY" ]; then contains "$ONLY" "$1"; return; fi
+    case "$1" in npm|cargo|aur) contains "$INCLUDE" "$1" ;; *) return 0 ;; esac
+}
+skip() { printf '[SKIP] %s\n' "$*"; SKIPPED=$((SKIPPED + 1)); }
+run() {
+    local scope="$1" label="$2" answer status
+    shift 2
+    printf '\n[%s]\n  ' "$label"; printf '%q ' "$@"; printf '\n'
+    if [ "$DRY" -eq 1 ]; then printf '[PREVIEW; scope=%s]\n' "$scope"; return 0; fi
+    if [ "$ASK" -eq 1 ]; then
+        printf 'Run? [y/N] '; IFS= read -r answer || answer=''
+        case "$answer" in y|Y|yes|YES) : ;; *) skip "$label (declined)"; return 3 ;; esac
+    fi
+    case "$scope" in
+        user) as_user "$@" ;;
+        root)
+            if [ "$EUID" -eq 0 ]; then "$@"
+            elif command -v sudo >/dev/null 2>&1; then
+                if [ -t 0 ]; then sudo -- "$@"; else sudo -n -- "$@"; fi
+            elif command -v doas >/dev/null 2>&1; then
+                if [ -t 0 ]; then doas "$@"; else doas -n "$@"; fi
+            else printf 'Administrator access needs sudo/doas or root.\n' >&2; false
+            fi ;;
+        *) "$@" ;;
+    esac
+    status=$?
+    if [ "$status" -eq 0 ]; then OK=$((OK + 1)); printf '[OK] %s (command completed)\n' "$label"; return 0; fi
+    FAILED=$((FAILED + 1)); FAILURES+=("$label (exit $status)")
+    printf '[FAILED] %s (exit %s)\n' "$label" "$status" >&2
+    return 1
+}
+release_lock() { [ -z "$LOCK" ] || rmdir "$LOCK" 2>/dev/null || :; }
+trap release_lock EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+if [ "$DRY" -eq 0 ]; then
+    # mkdir is atomic. Locks are per invoking UID; package managers arbitrate
+    # cross-user native transactions. Never remove a package manager's lock.
+    LOCK="${TMPDIR:-/tmp}/updateself-$EUID.lock"
+    if ! (umask 077; mkdir "$LOCK") 2>/dev/null; then
+        LOCK=''; printf 'Another invocation or stale updateself lock exists. See troubleshooting.\n' >&2; exit 75
+    fi
+fi
+
+OS=$(uname -s)
+DISTRO='' LIKE='' BACKEND=unsupported
+if [ "$OS" = Linux ]; then
+    # Parse only the required fields; do not source executable os-release text.
+    if [ -r /etc/os-release ]; then
+        DISTRO=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '\"\047')
+        LIKE=$(sed -n 's/^ID_LIKE=//p' /etc/os-release | tr -d '\"\047')
+    fi
+    case " $DISTRO $LIKE " in
+        *' nixos '*) BACKEND=nixos ;;
+        *' debian '*|*' ubuntu '*) BACKEND=apt ;;
+        *' fedora '*|*' rhel '*|*' centos '*) BACKEND=dnf ;;
+        *' arch '*|*' manjaro '*) BACKEND=pacman ;;
+        *' opensuse-tumbleweed '*) BACKEND=tumbleweed ;;
+        *' opensuse '*|*' opensuse-leap '*|*' suse '*|*' sles '*) BACKEND=zypper ;;
+        *' alpine '*) BACKEND=apk ;;
+        *' void '*) BACKEND=xbps ;;
+        *' gentoo '*) BACKEND=emerge ;;
+        *' slackware '*) BACKEND=slackpkg ;;
+    esac
+    if [ -e /run/ostree-booted ] || [ -e /usr/share/atomic/bootc ] || command -v transactional-update >/dev/null 2>&1; then
+        BACKEND=immutable
+    fi
+else
+    case "$OS" in Darwin) BACKEND=macos ;; FreeBSD) BACKEND=freebsd ;; OpenBSD) BACKEND=openbsd ;; NetBSD) BACKEND=netbsd ;; esac
+fi
+printf 'updateself %s | OS=%s | distribution=%s | backend=%s | user=%s\n' "$VERSION" "$OS" "${DISTRO:-n/a}" "$BACKEND" "$TARGET"
+printf 'Started: %s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')"
+
+native_updates() {
+    local pm status=0
+    local yes=()
+    [ "$ASK" -eq 1 ] || yes=(-y)
+    case "$BACKEND" in
+        apt)
+            run root 'APT repositories' apt-get -o APT::Update::Error-Mode=any update || return
+            if [ "$FULL" -eq 1 ]; then pm=dist-upgrade; else pm=upgrade; fi
+            run root 'APT packages' apt-get "$pm" "${yes[@]}" || return
+            if [ "$CLEAN" -eq 1 ]; then
+                run root 'APT unused dependencies' apt-get autoremove "${yes[@]}" || return
+                run root 'APT obsolete downloads' apt-get autoclean || return
+            fi ;;
+        dnf)
+            pm=$(command -v dnf5 || command -v dnf || command -v yum) || { run root 'RPM package manager missing' dnf upgrade; return; }
+            if [ "${pm##*/}" = yum ]; then
+                run root 'RPM packages' "$pm" update "${yes[@]}" || return
+            else
+                run root 'RPM packages' "$pm" upgrade --refresh "${yes[@]}" || return
+            fi
+            if [ "$CLEAN" -eq 1 ]; then run root 'RPM unused dependencies' "$pm" autoremove "${yes[@]}" || return; fi ;;
+        pacman)
+            local confirm=(); [ "$ASK" -eq 1 ] || confirm=(--noconfirm)
+            run root 'Arch complete upgrade' pacman -Syu "${confirm[@]}" || return
+            # No automatic orphan removal or aggressive cache deletion.
+            if [ "$CLEAN" -eq 1 ]; then skip 'Arch cleanup: inspect orphans/cache manually'; fi ;;
+        zypper|tumbleweed)
+            local zyes=(); [ "$ASK" -eq 1 ] || zyes=(--non-interactive)
+            run root 'Zypper repositories' zypper "${zyes[@]}" refresh || return
+            if [ "$BACKEND" = tumbleweed ]; then pm=dup; else pm=update; fi
+            run root 'Zypper packages' zypper "${zyes[@]}" "$pm" || return
+            if [ "$CLEAN" -eq 1 ]; then run root 'Zypper cache' zypper clean || return; fi ;;
+        apk)
+            run root 'Alpine repositories' apk update || return
+            run root 'Alpine packages' apk upgrade || return ;;
+        xbps)
+            run root 'Void packages / XBPS bootstrap' xbps-install -Su "${yes[@]}" || return
+            run root 'Void remaining packages' xbps-install -Su "${yes[@]}" || return
+            if [ "$CLEAN" -eq 1 ]; then run root 'Void orphan packages' xbps-remove -o "${yes[@]}" || return; fi ;;
+        emerge)
+            run root 'Gentoo repositories' emerge --sync || return
+            local eask=(); [ "$ASK" -eq 0 ] || eask=(--ask)
+            run root 'Gentoo world' emerge "${eask[@]}" --update --deep --newuse @world || return
+            run root 'Gentoo preserved libraries' emerge "${eask[@]}" @preserved-rebuild || return
+            if [ "$CLEAN" -eq 1 ]; then skip 'Gentoo depclean requires manual review'; fi ;;
+        slackpkg)
+            local opts=(); [ "$ASK" -eq 1 ] || opts=(-batch=on -default_answer=y)
+            run root 'Slackware repositories' slackpkg "${opts[@]}" update || return
+            run root 'Slackware new dependencies' slackpkg "${opts[@]}" install-new || return
+            run root 'Slackware packages' slackpkg "${opts[@]}" upgrade-all || return
+            skip 'Slackware: review .new configuration files with slackpkg new-config' ;;
+        freebsd)
+            run root 'FreeBSD packages' pkg upgrade "${yes[@]}" || return
+            if [ "$BASE" -eq 1 ]; then
+                # pkgbase installations are updated through their configured pkg repos.
+                if pkg info -e 'FreeBSD-runtime*' >/dev/null 2>&1; then
+                    skip 'FreeBSD pkgbase is handled by pkg upgrade'
+                elif [ "$(sysctl -n security.jail.jailed 2>/dev/null)" = 1 ]; then
+                    skip 'FreeBSD base patches inside a jail are not supported'
+                elif [ "$(uname -i)" != GENERIC ]; then
+                    skip 'FreeBSD custom kernel: use the documented manual base-update process'
+                else
+                    run root 'FreeBSD base patch download' freebsd-update fetch || return
+                    run root 'FreeBSD base patch installation' freebsd-update install || return
+                fi
+            fi ;;
+        openbsd)
+            local oyes=(); [ "$ASK" -eq 1 ] || oyes=(-I)
+            run root 'OpenBSD packages' pkg_add -u "${oyes[@]}" || return
+            if [ "$BASE" -eq 1 ]; then run root 'OpenBSD base patches' syspatch || return; fi ;;
+        netbsd) run root 'NetBSD repositories' pkgin update || return; run root 'NetBSD packages' pkgin "${yes[@]}" upgrade || return ;;
+        macos) skip 'macOS native updates are handled by apple/brew/macports components' ;;
+        nixos) skip 'NixOS requires explicit --base-install --nix-config nixos (nix component)' ;;
+        immutable) skip 'Immutable OS: native system updates unsupported; app components remain available' ;;
+        *) printf 'Unsupported native OS/distribution.\n' >&2; FAILED=$((FAILED + 1)); FAILURES+=('Native OS unsupported'); status=1 ;;
+    esac
+    return "$status"
+}
+if enabled system; then native_updates || :; fi
+
+BREW=$(user_command brew || true)
+if enabled brew; then
+    if [ -n "$BREW" ]; then
+        brew_run() { run user "$1" env HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_AUTOREMOVE=1 "$BREW" "${@:2}"; }
+        if brew_run 'Homebrew metadata' update; then
+            brew_ok=1
+            brew_run 'Homebrew formulae' upgrade --formula || brew_ok=0
+            cargs=(upgrade --cask); [ "$GREEDY" -eq 0 ] || cargs+=(--greedy)
+            if [ "$OS" = Darwin ]; then brew_run 'Homebrew casks' "${cargs[@]}" || brew_ok=0; fi
+            if [ "$CLEAN" -eq 1 ] && [ "$brew_ok" -eq 1 ]; then
+                if brew_run 'Homebrew unused dependencies' autoremove; then brew_run 'Homebrew cleanup' cleanup || :; fi
+            fi
+        fi
+    else skip 'Homebrew not installed for target user'; fi
+fi
+if enabled macports && [ "$OS" = Darwin ]; then
+    if command -v port >/dev/null 2>&1; then
+        if run root 'MacPorts metadata' port selfupdate; then run root 'MacPorts packages' port upgrade outdated || :; fi
+    else skip 'MacPorts not installed'; fi
+fi
+if enabled apple && [ "$OS" = Darwin ]; then
+    if [ "$BASE" -eq 1 ]; then run root 'Apple applicable updates' /usr/sbin/softwareupdate --install --all || :
+    else run local 'Apple available updates' /usr/sbin/softwareupdate --list || :; fi
+fi
+if enabled mas && [ "$OS" = Darwin ]; then
+    MAS=$(user_command mas || true)
+    if [ -n "$MAS" ]; then run user 'Mac App Store apps (may request authentication)' "$MAS" update || :; else skip 'mas not installed'; fi
+fi
+if enabled snap; then
+    if command -v snap >/dev/null 2>&1; then run root 'Snap packages' snap refresh || :; else skip 'Snap not installed'; fi
+fi
+if enabled flatpak; then
+    if command -v flatpak >/dev/null 2>&1; then
+        fyes=(); [ "$ASK" -eq 1 ] || fyes=(-y)
+        # --system covers the default installation; enumerate named system installations too.
+        if run root 'Flatpak system' flatpak update --system "${fyes[@]}"; then
+            if [ "$CLEAN" -eq 1 ]; then run root 'Flatpak system unused runtimes' flatpak uninstall --system --unused "${fyes[@]}" || :; fi
+        fi
+        while IFS= read -r installation; do
+            [ -n "$installation" ] || continue
+            if run root "Flatpak installation $installation" flatpak update "--installation=$installation" "${fyes[@]}"; then
+                if [ "$CLEAN" -eq 1 ]; then run root 'Flatpak unused runtimes' flatpak uninstall "--installation=$installation" --unused "${fyes[@]}" || :; fi
+            fi
+        done < <(awk '/^\[Installation "/ {sub(/^\[Installation "/, ""); sub(/"\].*$/, ""); print}' /etc/flatpak/installations.d/*.conf 2>/dev/null)
+        if [ "$TARGET" != root ]; then
+            if run user 'Flatpak user' flatpak update --user "${fyes[@]}"; then
+                if [ "$CLEAN" -eq 1 ]; then run user 'Flatpak user unused runtimes' flatpak uninstall --user --unused "${fyes[@]}" || :; fi
+            fi
+        fi
+    else skip 'Flatpak not installed'; fi
+fi
+
+# Resolve symlinks without GNU readlink -f. Query ownership before self-update.
+canonical() {
+    local p="$1" target n=0
+    while [ -L "$p" ] && [ "$n" -lt 40 ]; do
+        target=$(readlink "$p") || return 1
+        case "$target" in /*) p="$target" ;; *) p="${p%/*}/$target" ;; esac
+        n=$((n + 1))
+    done
+    [ "$n" -lt 40 ] || return 1
+    (cd "${p%/*}" 2>/dev/null && printf '%s/%s\n' "$(pwd -P)" "${p##*/}")
+}
+standalone() {
+    local tool="$1" path="$2" real
+    real=$(canonical "$path") || return 1
+    case "$real" in
+        */Cellar/*|*/Caskroom/*|/opt/local/*|/nix/store/*|*/.local/share/pipx/*|*/pipx/venvs/*|*/uv/tools/*|*/node_modules/*) return 1 ;;
+    esac
+    if command -v dpkg-query >/dev/null 2>&1 && { dpkg-query -S "$path" >/dev/null 2>&1 || dpkg-query -S "$real" >/dev/null 2>&1; }; then return 1; fi
+    if command -v rpm >/dev/null 2>&1 && rpm -qf "$real" >/dev/null 2>&1; then return 1; fi
+    if command -v pacman >/dev/null 2>&1 && pacman -Qo "$real" >/dev/null 2>&1; then return 1; fi
+    if command -v apk >/dev/null 2>&1 && apk info --who-owns "$real" >/dev/null 2>&1; then return 1; fi
+    if command -v xbps-query >/dev/null 2>&1 && [ -n "$(xbps-query -o "$real" 2>/dev/null)" ]; then return 1; fi
+    if [ "$OS" = FreeBSD ] && pkg which -q "$real" >/dev/null 2>&1; then return 1; fi
+    # Only positively identify known user installation layouts; unknown => skip.
+    case "$tool:$real" in
+        rust:"$TARGET_HOME"/.cargo/bin/*|uv:"$TARGET_HOME"/.local/bin/*|bun:"$TARGET_HOME"/.bun/bin/*|deno:"$TARGET_HOME"/.deno/bin/*|poetry:"$TARGET_HOME"/.local/share/pypoetry/*|composer:"$TARGET_HOME"/.local/bin/*|rclone:"$TARGET_HOME"/.local/bin/*|yt-dlp:"$TARGET_HOME"/.local/bin/*) return 0 ;;
+    esac
+    return 1
+}
+self_update() {
+    local component="$1" cmd="$2" executable
+    shift 2
+    enabled "$component" || return 0
+    executable=$(user_command "$cmd" || true)
+    if [ -z "$executable" ]; then skip "$component not installed for target user"; return 0; fi
+    if standalone "$component" "$executable"; then run user "$component self-update" "$executable" "$@" || :
+    else skip "$component: managed elsewhere or standalone ownership uncertain ($executable)"; fi
+}
+self_update rust rustup update
+self_update composer composer self-update
+self_update uv uv self update
+self_update bun bun upgrade
+# Preserve Deno channel instead of moving an LTS/canary installation to stable.
+if enabled deno; then
+    deno=$(user_command deno || true)
+    if [ -n "$deno" ] && standalone deno "$deno"; then
+        dv=$(as_user "$deno" --version 2>/dev/null)
+        case "$dv" in *canary*|*rc*) skip 'Deno prerelease channel requires manual update' ;;
+            *lts*) run user 'Deno LTS' "$deno" upgrade lts || : ;;
+            *) run user 'Deno stable' "$deno" upgrade || : ;; esac
+    else skip 'Deno missing, externally managed or uncertain ownership'; fi
+fi
+self_update poetry poetry self update
+self_update rclone rclone selfupdate
+self_update yt-dlp yt-dlp -U
+if enabled uv; then
+    uv=$(user_command uv || true)
+    if [ -n "$uv" ]; then run user 'uv CLI applications' "$uv" tool upgrade --all || :; fi
+fi
+if enabled pipx; then
+    pipx=$(user_command pipx || true)
+    if [ -n "$pipx" ]; then run user 'pipx CLI applications' "$pipx" upgrade-all || :; else skip 'pipx not installed'; fi
+fi
+if enabled clamav; then
+    if command -v freshclam >/dev/null 2>&1; then
+        if ! command -v pgrep >/dev/null 2>&1; then skip 'FreshClam: cannot check daemon without pgrep'
+        elif pgrep -x freshclam >/dev/null 2>&1; then skip 'FreshClam daemon already manages signatures'
+        else run root 'ClamAV signatures' freshclam || :; fi
+    else skip 'FreshClam not installed'; fi
+fi
+
+python_updates() {
+    [ "$TARGET" != root ] || { skip 'Python discovery needs a non-root target user'; return; }
+    local py path record real marker venv owner explicit packages package status
+    local seen='|' discovered=("${PYTHONS[@]}")
+    for path in "${VENVS[@]}"; do discovered+=("$path/bin/python"); done
+    # Discover PATH interpreters only; never scan disks for environments.
+    for py in python python3 python3.8 python3.9 python3.10 python3.11 python3.12 python3.13 python3.14 python3.15; do
+        path=$(user_command "$py" || true); [ -z "$path" ] || discovered+=("$path")
+    done
+    for path in "${discovered[@]}"; do
+        explicit=0
+        for py in "${PYTHONS[@]}"; do [ "$path" != "$py" ] || explicit=1; done
+        for py in "${VENVS[@]}"; do [ "$path" != "$py/bin/python" ] || explicit=1; done
+        if [ ! -x "$path" ]; then
+            FAILED=$((FAILED + 1)); FAILURES+=("Python executable missing: $path"); continue
+        fi
+        record=$(as_user "$path" -I -c 'import os,sys,sysconfig; print(sys.executable); print(sys.version.split()[0]); print(int(os.path.isfile(os.path.join(sysconfig.get_path("stdlib"),"EXTERNALLY-MANAGED")))); print(int(sys.prefix!=sys.base_prefix))' 2>/dev/null) || { skip "Cannot inspect Python: $path"; continue; }
+        real=$(printf '%s\n' "$record" | sed -n '1p')
+        # sys.executable retains venv identity, unlike resolving the executable symlink.
+        case "$seen" in *"|$real|"*) continue ;; esac; seen="$seen$real|"
+        marker=$(printf '%s\n' "$record" | sed -n '3p'); venv=$(printf '%s\n' "$record" | sed -n '4p')
+        printf '\n[PYTHON] %s | version=%s | externally-managed=%s | venv=%s\n' "$real" "$(printf '%s\n' "$record" | sed -n '2p')" "$marker" "$venv"
+        if ! as_user "$path" -I -m pip --version 2>/dev/null; then skip "pip absent in $path"; continue; fi
+        if [ "$marker" = 1 ] && [ "$venv" = 0 ]; then skip "pip owned by Python distributor: $path"; continue; fi
+        if [ "$explicit" -eq 0 ]; then skip "Python inspected; select --python/--venv to update pip: $path"; continue; fi
+        if [ "$venv" = 0 ]; then
+            # No marker is not proof that Python is user-owned.
+            owner=$(canonical "$path" || true)
+            case "$owner" in "$TARGET_HOME"/*) : ;; *) skip "Non-venv Python ownership uncertain: $path"; continue ;; esac
+            case "$owner" in */Cellar/*|*/.nix-profile/*|*/miniconda*/*|*/anaconda*/*|*/miniforge*/*) skip "Python managed by another environment tool: $path"; continue ;; esac
+        fi
+        run user "pip for $path" "$path" -I -m pip install --upgrade pip || continue
+        if [ "$PY_PACKAGES" -eq 1 ]; then
+            # Enumerate explicitly selected environment, not all discovered interpreters.
+            packages=$(as_user "$path" -I -m pip list --format=json 2>/dev/null | as_user "$path" -I -c 'import json,sys; print("\n".join(p["name"] for p in json.load(sys.stdin) if p["name"]!="pip"))')
+            status=$?
+            if [ "$status" -ne 0 ]; then FAILED=$((FAILED + 1)); FAILURES+=("Cannot list pip packages: $path"); continue; fi
+            local names=()
+            while IFS= read -r package; do [ -z "$package" ] || names+=("$package"); done <<< "$packages"
+            if [ "${#names[@]}" -gt 0 ]; then run user "Python packages for $path (may change major versions)" "$path" -I -m pip install --upgrade "${names[@]}" || :; fi
+        fi
+    done
+}
+if enabled python; then python_updates; fi
+
+if enabled nix; then
+    nix=$(user_command nix || true)
+    if [ -n "$nix" ]; then
+        if [ -n "$NIX_CONFIG" ]; then
+            cfg_ok=1
+            if [ -n "$NIX_FLAKE" ]; then
+                [ -d "$NIX_FLAKE" ] && [ -f "$NIX_FLAKE/flake.nix" ] || die 'Nix flake must be a local directory containing flake.nix'
+                if [ "$NIX_INPUTS" -eq 1 ]; then run user 'Nix configuration inputs' "$nix" flake update --flake "$NIX_FLAKE" || cfg_ok=0; fi
+            fi
+            if [ "$cfg_ok" -eq 1 ]; then
+                nargs=(); [ -z "$NIX_FLAKE" ] || nargs=(--flake "$NIX_FLAKE")
+                case "$NIX_CONFIG" in
+                    nixos) run root 'NixOS rebuild' nixos-rebuild switch "${nargs[@]}" || : ;;
+                    home-manager) run user 'Home Manager activation' home-manager switch "${nargs[@]}" || : ;;
+                    darwin) run root 'nix-darwin rebuild' darwin-rebuild switch "${nargs[@]}" || : ;;
+                esac
+            fi
+        elif as_user "$nix" profile list >/dev/null 2>&1; then
+            run user 'Nix user profile' "$nix" profile upgrade --all || :
+        elif [ -f "$TARGET_HOME/.nix-profile/manifest.nix" ] && user_command nix-env >/dev/null; then
+            if run user 'Legacy Nix user channels' nix-channel --update; then run user 'Legacy Nix user packages' nix-env --upgrade || :; fi
+        else skip 'Nix profile unavailable; declarative installations need --nix-config'; fi
+        if [ "$CLEAN" -eq 1 ]; then skip 'Nix garbage collection is manual; generations retained'; fi
+    else skip 'Nix not installed for target user'; fi
+fi
+if enabled npm; then
+    npm=$(user_command npm || true)
+    if [ -n "$npm" ]; then
+        prefix=$(as_user "$npm" prefix -g 2>/dev/null)
+        case "$prefix" in "$TARGET_HOME"/*) run user 'npm active user prefix (semver-compatible updates)' "$npm" update -g || : ;;
+            *) skip 'npm global prefix is system-owned or uncertain';; esac
+    else skip 'npm not installed'; fi
+fi
+if enabled cargo; then
+    cu=$(user_command cargo-install-update || true)
+    if [ -n "$cu" ]; then run user 'Cargo installed CLI tools' "$cu" --all || :; else skip 'cargo-update helper not installed'; fi
+fi
+if enabled aur; then
+    if [ "$BACKEND" = pacman ]; then
+        helper=$(user_command paru || user_command yay || true)
+        if [ -n "$helper" ]; then
+            aargs=(-Syu); [ "$ASK" -eq 1 ] || aargs+=(--noconfirm)
+            if [ "$FAILED" -eq 0 ]; then run user 'AUR applications' "$helper" "${aargs[@]}" || :; else skip 'AUR skipped after earlier failure'; fi
+        else skip 'AUR helper not installed'; fi
+    else skip 'AUR requires an Arch-based system'; fi
+fi
+if [ -e /var/run/reboot-required ]; then printf '\n[NOTICE] System reports a restart is required.\n'; fi
+printf '\nFinished: %s | completed commands=%s | skipped=%s | failed=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "$OK" "$SKIPPED" "$FAILED"
+[ "$DRY" -eq 0 ] || printf 'Preview only: no update commands executed.\n'
+if [ "$FAILED" -gt 0 ]; then printf 'Failures:\n'; printf '  %s\n' "${FAILURES[@]}"; exit 1; fi
+exit 0

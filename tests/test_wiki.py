@@ -33,7 +33,8 @@ class WikiTests(unittest.TestCase):
         for slug in re.findall(r"github.com/spaniakos/update-apt-system/wiki/([A-Za-z0-9_-]+)", (ROOT / "README.md").read_text()):
             self.assertIn(slug, slugs)
         home = (self.output / "Home.md").read_text()
-        self.assertIn("2.0.0 (unreleased)", home)
+        self.assertIn("Documentation for **updateself 2.0.0**.", home)
+        self.assertNotIn("2.0.0 (unreleased)", home)
         self.assertIn("test-source-ref", home)
 
     def test_document_links_become_wiki_or_pinned_source_links(self):

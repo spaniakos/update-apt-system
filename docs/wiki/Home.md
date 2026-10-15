@@ -6,8 +6,8 @@
 ## Downloads
 
 [Published releases and package downloads](https://github.com/spaniakos/update-apt-system/releases)
-contain installers, checksums and release notes. The first 2.0.0 release is being
-prepared. Until a release is published, use Git installation or signed-in
+contain installers, checksums and release notes. Downloads appear when a release
+is published. For development builds, use Git installation or signed-in
 **Actions → CI → Artifacts** for development packages.
 
 ## First run

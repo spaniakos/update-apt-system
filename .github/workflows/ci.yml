@@ -8,10 +8,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: updateself-v2-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   checks:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -43,6 +44,7 @@ jobs:
         run: python3 -m unittest discover -s tests -v
 
   linux-packages:
+    timeout-minutes: 25
     needs: checks
     runs-on: ubuntu-24.04
     strategy:
@@ -76,6 +78,7 @@ jobs:
           if-no-files-found: error
 
   macos-package:
+    timeout-minutes: 20
     needs: checks
     strategy:
       matrix:
@@ -104,6 +107,7 @@ jobs:
           if-no-files-found: error
 
   bsd-packages:
+    timeout-minutes: 30
     needs: checks
     runs-on: ubuntu-24.04
     strategy:
@@ -142,6 +146,7 @@ jobs:
           if-no-files-found: error
 
   portable-recipes:
+    timeout-minutes: 10
     needs: checks
     runs-on: ubuntu-24.04
     steps:
@@ -161,6 +166,7 @@ jobs:
           if-no-files-found: error
 
   nix:
+    timeout-minutes: 20
     needs: checks
     runs-on: ubuntu-24.04
     steps:

@@ -6,7 +6,7 @@ PREFIX="$HOME/.local"
 DESTDIR=${DESTDIR:-}
 SHORT=1 REMOVE=0 MODE=user
 MAN_SUBDIR=share/man
-case "$(uname -s)" in OpenBSD|NetBSD) MAN_SUBDIR=man ;; esac
+case "$(uname -s)" in OpenBSD|NetBSD) MAN_SUBDIR='man' ;; esac
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --user) PREFIX="$HOME/.local"; MODE=user ;;

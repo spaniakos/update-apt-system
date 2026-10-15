@@ -5,57 +5,82 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: updateself-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  validate-tag:
+  validate-ref:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Require matching release tag
+      - name: Validate version and release reference
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          test "$REF_TYPE" = tag
-          test "$REF_NAME" = "v$(cat VERSION)"
+          bash scripts/check.sh
+          test -s "docs/releases/$(cat VERSION).md"
+          if [ "$EVENT_NAME" = push ] || [ "$REF_TYPE" = tag ]; then
+            test "$REF_TYPE" = tag
+            test "$REF_NAME" = "v$(cat VERSION)"
+            if grep -Eq "^## $(cat VERSION).*unreleased" CHANGELOG.md; then
+              echo 'Finalize the changelog date before tagging a release.' >&2
+              exit 1
+            fi
+          fi
   build:
-    needs: validate-tag
+    needs: validate-ref
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
-  draft-release:
+  assemble:
     needs: build
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: package-*
+          path: collected
+      - name: Validate and assemble release assets
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          python3 scripts/release_assets.py --source collected --output dist --revision "$SOURCE_REVISION"
+          (cd dist && sha256sum -c SHA256SUMS)
+          cat dist/BUILD-REPORT.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-preview
+          path: dist/*
+          if-no-files-found: error
+  draft-release:
+    needs: assemble
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: package-*
-          path: collected
-      - name: Collect unique assets
-        run: |
-          mkdir dist
-          python3 - <<'PY'
-          from pathlib import Path
-          import shutil
-          out = Path("dist")
-          for p in Path("collected").rglob("*"):
-              if not p.is_file() or p.name == "SHA256SUMS":
-                  continue
-              target = out / p.name
-              if target.exists():
-                  raise SystemExit(f"Duplicate release asset: {p.name}")
-              shutil.copy2(p, target)
-          PY
-          python3 scripts/checksums.py dist
-      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+          name: release-preview
+          path: dist
+      - name: Verify downloaded release checksums
+        run: (cd dist && sha256sum -c SHA256SUMS)
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
       - name: Create draft release
@@ -63,4 +88,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" dist/* --draft --verify-tag --generate-notes --title "updateself $TAG"
+          gh release create "$TAG" dist/* --draft --verify-tag --notes-file dist/RELEASE-NOTES.md --title "updateself $TAG"

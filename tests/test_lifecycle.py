@@ -16,7 +16,9 @@ class LifecycleTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="updateself lifecycle ")
         self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
+        # macOS resolves /var and /tmp through /private; match production's
+        # physical-path ownership comparisons in these temporary fixtures.
+        self.root = Path(self.tmp.name).resolve()
         self.source = self.root / "source"
         self.source.mkdir()
         for item in ["bin", "man", "completions"]:

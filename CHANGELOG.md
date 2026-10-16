@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0 — 2026-10-16
+
+- Add explicit --check-self-update, --self-update and --uninstall actions.
+- Detect installation ownership and delegate native manager operations.
+- Add verified stable-release downloads for macOS pkg and Git/archive installs.
+- Preserve modified Git/macOS files during uninstall; use a private helper while replacing/removing the executable.
+- Preserve install prefixes and restore Git/archive managed files after an installer failure.
+- Add lifecycle documentation, completions, manual and CI coverage.
+
 ## 2.0.0 — 2026-10-15
 
 - Rename the application to updateself, with optional updsf command.

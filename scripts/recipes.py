@@ -10,10 +10,10 @@ v = (root / "VERSION").read_text().strip()
 archive = out / f"updateself-{v}.tar.gz"
 sha = hashlib.sha256(archive.read_bytes()).hexdigest()
 sha512 = hashlib.sha512(archive.read_bytes()).hexdigest()
-url = f"https://github.com/spaniakos/update-apt-system/releases/download/v{v}/updateself-{v}.tar.gz"
+url = f"https://github.com/spaniakos/updateself/releases/download/v{v}/updateself-{v}.tar.gz"
 (out / "updateself.rb").write_text(f'''class Updateself < Formula
   desc "Cross-platform operating-system and CLI tool updater"
-  homepage "https://github.com/spaniakos/update-apt-system"
+  homepage "https://github.com/spaniakos/updateself"
   url "{url}"
   sha256 "{sha}"
   license "GPL-3.0-only"
@@ -41,8 +41,8 @@ license GPL-3
 maintainers nomaintainer
 description Cross-platform operating-system and CLI tool updater
 long_description ${{description}}
-homepage https://github.com/spaniakos/update-apt-system
-master_sites https://github.com/spaniakos/update-apt-system/releases/download/v${{version}}
+homepage https://github.com/spaniakos/updateself
+master_sites https://github.com/spaniakos/updateself/releases/download/v${{version}}
 checksums sha256 {sha} size {archive.stat().st_size}
 depends_run port:bash
 use_configure no
@@ -54,7 +54,7 @@ destroot {{
 ''')
 (out / f"updateself-{v}.ebuild").write_text(f'''EAPI=8
 DESCRIPTION="Cross-platform operating-system and CLI tool updater"
-HOMEPAGE="https://github.com/spaniakos/update-apt-system"
+HOMEPAGE="https://github.com/spaniakos/updateself"
 SRC_URI="{url}"
 LICENSE="GPL-3"
 SLOT="0"

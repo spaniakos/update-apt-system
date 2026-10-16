@@ -9,14 +9,18 @@ case "$FORMAT" in
         bash scripts/package.sh deb
         apt-get install -y ./dist/updateself_*_all.deb
         updateself --help; updsf --version; updateself --only system --dry-run
-        apt-get remove -y updateself
+        updateself --uninstall --dry-run
+        updateself --self-update --dry-run
+        updateself --uninstall --yes
         ;;
     rpm)
         dnf install -y bash rpm-build python3 findutils tar gzip
         bash scripts/package.sh rpm
         dnf install -y ./dist/updateself-*.noarch.rpm
         updateself --help; updsf --version; updateself --only system --dry-run
-        dnf remove -y updateself
+        updateself --uninstall --dry-run
+        updateself --self-update --dry-run
+        updateself --uninstall --yes
         ;;
     arch)
         pacman -Syu --noconfirm --needed base-devel python
@@ -25,7 +29,9 @@ case "$FORMAT" in
         su builder -c 'cd /src && bash scripts/package.sh arch'
         pacman -U --noconfirm ./dist/updateself-*.pkg.tar.zst
         updateself --help; updsf --version; updateself --only system --dry-run
-        pacman -R --noconfirm updateself
+        updateself --uninstall --dry-run
+        updateself --self-update --dry-run
+        updateself --uninstall --yes
         ;;
     apk)
         apk add bash alpine-sdk python3 sudo
@@ -39,7 +45,9 @@ case "$FORMAT" in
         su builder -c 'cd /src; bash scripts/package.sh apk'
         apk add ./dist/updateself-*.apk
         updateself --help; updsf --version; updateself --only system --dry-run
-        apk del updateself
+        updateself --uninstall --dry-run
+        updateself --self-update --dry-run
+        updateself --uninstall --yes
         ;;
     xbps)
         xbps-install -Suy xbps
@@ -48,14 +56,18 @@ case "$FORMAT" in
         xbps-rindex -a dist/*.xbps
         xbps-install -y --repository="$PWD/dist" updateself
         updateself --help; updsf --version; updateself --only system --dry-run
-        xbps-remove -y updateself
+        updateself --uninstall --dry-run
+        updateself --self-update --dry-run
+        updateself --uninstall --yes
         rm -f dist/*-repodata
         ;;
     slackware)
         bash scripts/package.sh slackware
         installpkg dist/updateself-*.txz
         updateself --help; updsf --version; updateself --only system --dry-run
-        removepkg updateself
+        updateself --uninstall --dry-run
+        updateself --self-update --dry-run
+        updateself --uninstall --yes
         ;;
     *) exit 2 ;;
 esac

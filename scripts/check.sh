@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+python3 scripts/embed-lifecycle.py --check
 while IFS= read -r path; do bash -n "$path"; done < <(find bin scripts -type f -name '*.sh'; printf '%s\n' bin/updateself install.sh update.sh completions/updateself.bash)
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck -S warning bin/updateself install.sh update.sh scripts/*.sh completions/updateself.bash

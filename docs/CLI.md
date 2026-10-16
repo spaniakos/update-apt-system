@@ -1,4 +1,15 @@
-# CLI reference (2.0.0)
+# CLI reference (2.1.0)
+
+## Self-management (separate from system/tool updates)
+
+- **--check-self-update**: read-only latest stable release check.
+- **--self-update**: update through the detected installation owner.
+- **--uninstall**: remove updateself through that owner.
+- Combine with **--dry-run** for an offline preview or **--yes** for reviewed automation.
+  Self-update/removal ask by default and cannot be combined with component options.
+
+See [self-management](wiki/Self-Management.md) for verification, dependencies,
+modified-file retention, configured-repository limitations and recovery.
 
 `updateself`, `updsf` and the checkout's `bash update.sh` accept the same options.
 Long options use separate arguments (`--user alice`), not `--user=alice`.

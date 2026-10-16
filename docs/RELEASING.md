@@ -56,7 +56,7 @@ remain supported and also reuse existing drafts.
   These downloads require GitHub sign-in and expire according to Actions retention.
 - Release previews: open **Actions → CI → a successful run → Artifacts → release-preview**,
   or the equivalent artifact in a manual **Release packages** run. It contains the exact layout used for release assets.
-- Published versions: [GitHub Releases](https://github.com/spaniakos/update-apt-system/releases).
+- Published versions: [GitHub Releases](https://github.com/spaniakos/updateself/releases).
   Installers and archives appear under **Assets**, alongside SHA256SUMS,
   RELEASE-NOTES.md and BUILD-REPORT.md. Drafts are visible only to maintainers.
 - **GitHub Packages** is a separate registry, not the location of these installers.
@@ -137,7 +137,7 @@ To verify all assets after downloading them together:
 ```bash
 sha256sum -c SHA256SUMS              # Linux
 shasum -a 256 -c SHA256SUMS          # macOS
-gh attestation verify PACKAGE --repo spaniakos/update-apt-system
+gh attestation verify PACKAGE --repo spaniakos/updateself
 ```
 
 Replace PACKAGE with a downloaded package filename. Attestations verify provenance;

@@ -1,4 +1,4 @@
-.TH UPDATESELF 1 "October 2026" "updateself 2.0.0"
+.TH UPDATESELF 1 "October 2026" "updateself 2.1.0"
 .SH NAME
 updateself, updsf \- update installed operating-system packages and CLI tools
 .SH SYNOPSIS
@@ -27,6 +27,20 @@ Choose the non-root account used for user-level tools.
 .TP
 .B --dry-run
 Print update commands; allow read-only discovery only.
+.TP
+.B --check-self-update
+Check the latest stable GitHub release. Requires curl; read-only.
+.TP
+.B --self-update, --uninstall
+Update or remove updateself through its detected installation owner. These actions
+ask for confirmation by default; use --yes for reviewed automation. --dry-run
+performs no network request, write or mutation. Do not combine with component
+options. Unknown/ambiguous owners are refused. Native managers use configured
+repositories; a local release package may need manual installation if no updateself
+repository exists. Git/archive and macOS pkg installs verify release checksums;
+GitHub CLI, when present, must also verify provenance. macOS installers are unsigned.
+Modified Git/macOS files are retained during uninstall. See the Wiki Self-Management
+guide for dependencies, profiles and recovery.
 .TP
 .B --only LIST, --skip LIST, --include LIST
 Select comma-separated components. Skip takes precedence. Include enables

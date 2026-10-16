@@ -13,13 +13,14 @@ PREFIX=/usr
 case "$FORMAT" in freebsd|openbsd|macos) PREFIX=/usr/local ;; netbsd) PREFIX=/usr/pkg ;; esac
 bash "$ROOT/install.sh" --system --prefix "$PREFIX" --destdir "$WORK/root"
 # Native packages own their files via the package database, not the Git installer.
+if [ "$FORMAT" = macos ]; then cp "$WORK/root$PREFIX/share/updateself/manifest" "$WORK/root$PREFIX/share/updateself/package-manifest"; fi
 rm "$WORK/root$PREFIX/share/updateself/manifest"
 DESCRIPTION='Cross-platform operating-system and CLI tool updater'
-URL=https://github.com/spaniakos/update-apt-system
+URL=https://github.com/spaniakos/updateself
 case "$FORMAT" in
     portable)
         mkdir "$WORK/updateself-$VERSION"
-        for item in bin docs completions man scripts packaging tests .github flake.nix flake.lock install.sh update.sh Makefile README.md VERSION LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md; do
+        for item in bin src docs completions man scripts packaging tests .github flake.nix flake.lock install.sh update.sh Makefile README.md VERSION LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md; do
             cp -R "$ROOT/$item" "$WORK/updateself-$VERSION/"
         done
         find "$WORK/updateself-$VERSION" -type d -name __pycache__ -prune -exec rm -rf {} +

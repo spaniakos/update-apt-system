@@ -1,6 +1,6 @@
 # GitHub Wiki maintenance
 
-The public documentation lives at <https://github.com/spaniakos/update-apt-system/wiki>.
+The public documentation lives at <https://github.com/spaniakos/updateself/wiki>.
 Reviewed source documents remain here so edits can be proposed in pull requests
 and each release archive retains matching documentation.
 
@@ -56,7 +56,7 @@ explicit publish-job failure. A skipped publishing job on a PR is expected.
 ```bash
 python3 scripts/wiki.py build --output build/wiki --source-ref feature/updateself-v2
 bash scripts/publish-wiki.sh build/wiki \
-  https://github.com/spaniakos/update-apt-system.wiki.git feature/updateself-v2
+  https://github.com/spaniakos/updateself.wiki.git feature/updateself-v2
 ```
 
 This is useful for an authorized initial publication before the feature PR is

@@ -6,7 +6,7 @@ FreeBSD, OpenBSD, NetBSD and Nix. Created by **G. Spanos**, licensed under GPLv3
 
 ## Downloads
 
-**[Download published releases](https://github.com/spaniakos/update-apt-system/releases)**
+**[Download published releases](https://github.com/spaniakos/updateself/releases)**
 for installers, archives, checksums and release notes. Downloads appear when a
 release is published; merging alone does not publish a release. Development builds
 are available under **Actions → CI → Artifacts** and require GitHub sign-in.
@@ -15,7 +15,7 @@ GitHub Packages and distribution repositories are separate future publication ta
 ## Get started
 
 ```bash
-git clone https://github.com/spaniakos/update-apt-system.git
+git clone https://github.com/spaniakos/updateself.git
 cd update-apt-system
 bash update.sh --dry-run
 bash install.sh --user
@@ -30,16 +30,21 @@ Missing optional tools are skipped, never installed automatically.
 
 ## Documentation — GitHub Wiki
 
-**[Open the Wiki](https://github.com/spaniakos/update-apt-system/wiki)** for full
+For updateself's own installation (2.1.0+): `updateself --check-self-update`,
+`updateself --self-update` and `updateself --uninstall`. The mutation commands ask
+for confirmation by default; inspect `--dry-run` first. See
+[self-management](docs/wiki/Self-Management.md) for ownership and update-source limits.
+
+**[Open the Wiki](https://github.com/spaniakos/updateself/wiki)** for full
 documentation, platform guides and troubleshooting.
 
 | Start here | Reference and help |
 | --- | --- |
-| [Installation](https://github.com/spaniakos/update-apt-system/wiki/Installation) | [Command reference](https://github.com/spaniakos/update-apt-system/wiki/Command-Reference) |
-| [macOS](https://github.com/spaniakos/update-apt-system/wiki/macOS) | [Supported tools](https://github.com/spaniakos/update-apt-system/wiki/Supported-Tools) |
-| [Linux](https://github.com/spaniakos/update-apt-system/wiki/Linux) | [Python and pip](https://github.com/spaniakos/update-apt-system/wiki/Python-and-pip) |
-| [BSD](https://github.com/spaniakos/update-apt-system/wiki/BSD) | [Nix](https://github.com/spaniakos/update-apt-system/wiki/Nix) |
-| [Packages and releases](https://github.com/spaniakos/update-apt-system/wiki/Packages-and-Releases) | [Troubleshooting](https://github.com/spaniakos/update-apt-system/wiki/Troubleshooting) |
+| [Installation](https://github.com/spaniakos/updateself/wiki/Installation) | [Command reference](https://github.com/spaniakos/updateself/wiki/Command-Reference) |
+| [macOS](https://github.com/spaniakos/updateself/wiki/macOS) | [Supported tools](https://github.com/spaniakos/updateself/wiki/Supported-Tools) |
+| [Linux](https://github.com/spaniakos/updateself/wiki/Linux) | [Python and pip](https://github.com/spaniakos/updateself/wiki/Python-and-pip) |
+| [BSD](https://github.com/spaniakos/updateself/wiki/BSD) | [Nix](https://github.com/spaniakos/updateself/wiki/Nix) |
+| [Packages and releases](https://github.com/spaniakos/updateself/wiki/Packages-and-Releases) | [Troubleshooting](https://github.com/spaniakos/updateself/wiki/Troubleshooting) |
 
 The Wiki is generated from reviewed sources in this repository. Release archives
 retain their matching docs. See [documentation maintenance](docs/WIKI.md).

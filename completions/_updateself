@@ -6,6 +6,8 @@ _arguments \
   '(-n --ask)'{-n,--ask}'[Confirm commands]' \
   '(-u --user)'{-u,--user}'[Target user]:user:_users' \
   '--dry-run[Preview commands]' '--cleanup[Clean after updates]' \
+  '--check-self-update[Check latest stable updateself]' \
+  '--self-update[Update updateself itself]' '--uninstall[Uninstall updateself]' \
   '--full-upgrade[APT dist-upgrade]' '--base-install[Install base updates]' \
   '--apple-install[Install Apple updates]' '--greedy[Additional Homebrew casks]' \
   '--only[Components]:list:' '--skip[Excluded components]:list:' \

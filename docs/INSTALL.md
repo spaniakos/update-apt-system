@@ -1,11 +1,18 @@
 # Installation and removal
 
+Starting with 2.1.0, installed copies support `updateself --uninstall --dry-run`
+and `updateself --uninstall`. These detect the installation owner and ask for
+confirmation before removal. `updateself --self-update` updates through the same
+owner. See [self-management](wiki/Self-Management.md) for dependencies, modified-file
+retention, update-source limits and recovery. A 2.0.0 installation needs one manual
+upgrade to the 2.1.0 installer/package before these flags are available.
+
 ## From Git
 
 Clone the existing repository, then check out a reviewed tag for a stable install:
 
 ```bash
-git clone https://github.com/spaniakos/update-apt-system.git
+git clone https://github.com/spaniakos/updateself.git
 cd update-apt-system
 # git checkout v2.0.0  # after this tag has actually been released
 bash install.sh --user

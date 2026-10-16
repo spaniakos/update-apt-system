@@ -24,7 +24,7 @@
             '';
             meta = {
               description = "Update installed operating-system packages and CLI tools";
-              homepage = "https://github.com/spaniakos/update-apt-system";
+              homepage = "https://github.com/spaniakos/updateself";
               license = pkgs.lib.licenses.gpl3Only;
               platforms = systems;
               mainProgram = "updateself";

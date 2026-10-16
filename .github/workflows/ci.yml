@@ -95,11 +95,12 @@ jobs:
           /usr/local/bin/updateself --help
           /usr/local/bin/updsf --version
           /usr/local/bin/updateself --only apple --dry-run
-          sudo rm /usr/local/bin/updsf /usr/local/bin/updateself
-          sudo rm /usr/local/share/man/man1/updateself.1 /usr/local/share/man/man1/updsf.1
-          sudo rm /usr/local/share/bash-completion/completions/updateself /usr/local/share/zsh/site-functions/_updateself
-          sudo rm /usr/local/share/updateself/LICENSE /usr/local/share/updateself/README.md
-          sudo pkgutil --forget gr.makeasite.updateself
+          /usr/local/bin/updateself --uninstall --dry-run
+          /usr/local/bin/updateself --self-update --dry-run
+          sudo /usr/local/bin/updateself --uninstall --yes
+          test ! -e /usr/local/bin/updateself
+          test ! -L /usr/local/bin/updsf
+          if pkgutil --pkg-info gr.makeasite.updateself; then exit 1; fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-macos-${{ matrix.os }}

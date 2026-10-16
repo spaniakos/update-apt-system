@@ -267,7 +267,7 @@ class InstallerTests(unittest.TestCase):
         for cmd in ["updateself", "updsf"]:
             p = subprocess.run([str(self.base / "bin" / cmd), "--version"], capture_output=True, text=True)
             self.assertEqual(p.returncode, 0, p.stderr)
-            self.assertEqual(p.stdout.strip(), "2.0.0")
+            self.assertEqual(p.stdout.strip(), (ROOT / "VERSION").read_text().strip())
         p = self.install("--uninstall"); self.assertEqual(p.returncode, 0, p.stderr)
         self.assertFalse((self.base / "bin/updateself").exists())
         self.assertFalse((self.base / "bin/updsf").is_symlink())

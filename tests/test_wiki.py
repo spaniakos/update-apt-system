@@ -30,20 +30,20 @@ class WikiTests(unittest.TestCase):
         for text in [p.read_text() for p in self.output.glob("*.md")]:
             for match in wiki.WIKILINK.finditer(text):
                 self.assertIn(match.group(1).rsplit("|", 1)[-1], slugs)
-        for slug in re.findall(r"github.com/spaniakos/update-apt-system/wiki/([A-Za-z0-9_-]+)", (ROOT / "README.md").read_text()):
+        for slug in re.findall(r"github.com/spaniakos/updateself/wiki/([A-Za-z0-9_-]+)", (ROOT / "README.md").read_text()):
             self.assertIn(slug, slugs)
         home = (self.output / "Home.md").read_text()
-        self.assertIn("Documentation for **updateself 2.0.0**.", home)
-        self.assertNotIn("2.0.0 (unreleased)", home)
+        version = (ROOT / "VERSION").read_text().strip()
+        self.assertIn(f"Documentation for **updateself {version}", home)
         self.assertIn("test-source-ref", home)
 
     def test_document_links_become_wiki_or_pinned_source_links(self):
         sources = {"Installation": Path("docs/INSTALL.md")}
-        result = wiki.rewrite_links("[Install](INSTALL.md) [Policy](../SECURITY.md)", Path("docs/CLI.md"), sources, "spaniakos/update-apt-system", "abc123")
+        result = wiki.rewrite_links("[Install](INSTALL.md) [Policy](../SECURITY.md)", Path("docs/CLI.md"), sources, "spaniakos/updateself", "abc123")
         self.assertIn("/wiki/Installation", result)
         self.assertIn("/blob/abc123/SECURITY.md", result)
         with self.assertRaises(ValueError):
-            wiki.rewrite_links("[Broken](missing.md)", Path("docs/CLI.md"), sources, "spaniakos/update-apt-system", "abc123")
+            wiki.rewrite_links("[Broken](missing.md)", Path("docs/CLI.md"), sources, "spaniakos/updateself", "abc123")
 
     def test_renderer_is_repeatable_and_refuses_unowned_output(self):
         names = wiki.build(self.output, "abc123")

@@ -8,7 +8,9 @@ case "$FORMAT" in
         pkg add dist/updateself-*.pkg
         /usr/local/bin/updateself --help; /usr/local/bin/updsf --version
         /usr/local/bin/updateself --only system --dry-run
-        pkg delete -y updateself
+        /usr/local/bin/updateself --uninstall --dry-run
+        /usr/local/bin/updateself --self-update --dry-run
+        /usr/local/bin/updateself --uninstall --yes
         test ! -e /usr/local/bin/updateself
         ;;
     openbsd)
@@ -16,7 +18,9 @@ case "$FORMAT" in
         pkg_add -D unsigned dist/updateself-*.tgz
         /usr/local/bin/updateself --help; /usr/local/bin/updsf --version
         /usr/local/bin/updateself --only system --dry-run
-        pkg_delete updateself
+        /usr/local/bin/updateself --uninstall --dry-run
+        /usr/local/bin/updateself --self-update --dry-run
+        /usr/local/bin/updateself --uninstall --yes
         test ! -e /usr/local/bin/updateself
         ;;
     netbsd)
@@ -25,7 +29,9 @@ case "$FORMAT" in
         pkg_add dist/updateself-*.tgz
         /usr/pkg/bin/updateself --help; /usr/pkg/bin/updsf --version
         /usr/pkg/bin/updateself --only system --dry-run
-        pkg_delete updateself
+        /usr/pkg/bin/updateself --uninstall --dry-run
+        /usr/pkg/bin/updateself --self-update --dry-run
+        /usr/pkg/bin/updateself --uninstall --yes
         test ! -e /usr/pkg/bin/updateself
         ;;
 esac

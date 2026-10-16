@@ -14,7 +14,7 @@ print(json.dumps({
     "name": "updateself", "version": sys.argv[2], "origin": "sysutils/updateself",
     "comment": "Cross-platform operating-system and CLI tool updater",
     "desc": "Update installed packages and supported user-owned tools.",
-    "maintainer": "spaniakos@gmail.com", "www": "https://github.com/spaniakos/update-apt-system",
+    "maintainer": "spaniakos@gmail.com", "www": "https://github.com/spaniakos/updateself",
     "prefix": "/usr/local", "arch": subprocess.check_output(["pkg", "config", "ABI"], text=True).strip(),
     "licenses": ["GPLv3"], "licenselogic": "single", "files": files,
     "deps": {"bash": {"origin": "shells/bash", "version": subprocess.check_output(["pkg", "query", "%v", "bash"], text=True).strip()}},

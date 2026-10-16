@@ -42,7 +42,7 @@ def rewrite_links(text, source, page_sources, repository, source_ref):
     return MARKDOWN_LINK.sub(replace, text)
 
 
-def build(output, source_ref, repository="spaniakos/update-apt-system"):
+def build(output, source_ref, repository="spaniakos/updateself"):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
         raise ValueError("Repository must be OWNER/NAME")
     page_sources = {slug: Path(path) for slug, path in IMPORTED.items()}
@@ -61,7 +61,7 @@ def build(output, source_ref, repository="spaniakos/update-apt-system"):
         rendered[slug + ".md"] = header + rewrite_links(body, path, page_sources, repository, source_ref)
     rendered["_Sidebar.md"] = "\n".join([
         "**updateself**", "", "[[Home]]", "[[Installation]]",
-        "[[Command reference|Command-Reference]]", "", "**Platform guides**", "",
+        "[[Command reference|Command-Reference]]", "[[Self-management|Self-Management]]", "", "**Platform guides**", "",
         "[[macOS]]", "[[Linux]]", "[[BSD]]", "[[Nix]]", "",
         "**Tools and help**", "", "[[Supported tools|Supported-Tools]]",
         "[[Python and pip|Python-and-pip]]", "[[Platform support|Platform-Support]]",
@@ -131,7 +131,7 @@ def main():
     render = commands.add_parser("build")
     render.add_argument("--output", required=True)
     render.add_argument("--source-ref", required=True)
-    render.add_argument("--repository", default="spaniakos/update-apt-system")
+    render.add_argument("--repository", default="spaniakos/updateself")
     sync = commands.add_parser("sync")
     sync.add_argument("--source", required=True)
     sync.add_argument("--checkout", required=True)

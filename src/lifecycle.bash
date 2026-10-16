@@ -93,7 +93,7 @@ print(matches[0])' "$store") || entry=''
         case "$owner" in *' is owned by updateself-'[0-9]*) lc_claim apk ;; *) lc_error 'Executable belongs to another Alpine package' ;; esac
     fi
     if command -v xbps-query >/dev/null && owner=$(xbps-query -o "$LC_REAL" 2>/dev/null) && [ -n "$owner" ]; then
-        case "$owner" in updateself-[0-9]*": $LC_REAL") lc_claim xbps ;; *) lc_error 'Executable belongs to another Void package' ;; esac
+        case "$owner" in updateself-[0-9]*": $LC_REAL"|updateself-[0-9]*": $LC_REAL ("*")") lc_claim xbps ;; *) lc_error 'Executable belongs to another Void package' ;; esac
     fi
     case "$(uname -s)" in
         Darwin)
@@ -107,7 +107,7 @@ print(matches[0])' "$store") || entry=''
             fi ;;
         OpenBSD|NetBSD)
             local query=-Fe
-            [ "$(uname -s)" != OpenBSD ] || query=-E
+            [ "$(uname -s)" != OpenBSD ] || query=-qE
             if owner=$(pkg_info "$query" "$LC_REAL" 2>/dev/null); then
                 case "$owner" in updateself-[0-9]*)
                     if [ "$(uname -s)" = OpenBSD ]; then lc_claim openbsd "$owner"; else lc_claim netbsd "$owner"; fi ;;

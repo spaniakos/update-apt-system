@@ -272,6 +272,40 @@ exit 42
             self.assertEqual(p.returncode, 2)
             self.assertEqual(list(self.temp.iterdir()), [])
 
+    def test_void_owner_output_includes_file_type(self):
+        self.stub("xbps-query", 'printf "updateself-2.1.0_1: %s (regular file)\\n" "$2"')
+        self.stub("xbps-remove", 'echo "xbps-remove $*" >> "$TEST_CALLS"')
+        p = self.run_script("--uninstall", "--yes")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("xbps-remove -y updateself", self.calls())
+
+    def test_openbsd_owner_query_is_quiet_and_netbsd_uses_file_lookup(self):
+        self.stub("pkg_info", '''case "$1" in -qE|-Fe) echo updateself-2.1.0;; *) echo "$2: updateself-2.1.0"; echo 'updateself-2.1.0 package description';; esac''')
+        self.stub("pkg_delete", 'echo "pkg_delete $*" >> "$TEST_CALLS"')
+        for system in ["OpenBSD", "NetBSD"]:
+            self.env["TEST_OS"] = system
+            p = self.run_script("--uninstall", "--yes")
+            self.assertEqual(p.returncode, 0, (system, p.stderr))
+        self.assertEqual(self.calls().count("pkg_delete updateself-2.1.0"), 2)
+
+    def test_macos_update_selects_and_verifies_architecture_pkg(self):
+        import shlex
+        installer = self.stubdir / "installer"
+        source = self.source / "bin/updateself"
+        source.write_text(source.read_text().replace("/usr/sbin/installer", shlex.quote(str(installer))))
+        self.install()
+        self.env.update(TEST_OS="Darwin", TEST_MAC="1")
+        manifest = self.prefix / "share/updateself/manifest"
+        manifest.rename(manifest.with_name("package-manifest"))
+        asset = self.release / "updateself-2.2.0-macos-arm64.pkg"
+        asset.write_bytes(b"package fixture")
+        (self.release / "SHA256SUMS").write_text(f"{hashlib.sha256(asset.read_bytes()).hexdigest()}  {asset.name}\n")
+        self.stub("installer", 'echo "installer $*" >> "$TEST_CALLS"')
+        p = self.run_script("--self-update", "--yes")
+        self.assertEqual(p.returncode, 0, (p.stdout, p.stderr))
+        self.assertIn("SHA-256 verified", p.stdout)
+        self.assertIn("updateself-2.2.0-macos-arm64.pkg -target /", self.calls())
+
 
 if __name__ == "__main__":
     unittest.main()

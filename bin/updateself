@@ -269,6 +269,7 @@ lc_plan() {
         esac
     fi
     printf 'Installation: %s | executable: %s\n' "$LC_MANAGER" "$LC_REAL"
+    if [ "$LC_ACTION" = check-self-update ]; then printf 'Check latest stable GitHub release metadata (read-only).\n'; return; fi
     if [ "${#LC_COMMAND[@]}" -gt 0 ]; then printf 'Command: '; printf '%q ' "${LC_COMMAND[@]}"; printf '\n'
     elif [ "$LC_ACTION" = uninstall ]; then printf 'Remove unchanged owned files from %s; retain modified/unrelated files.\n' "$LC_PREFIX"
     else printf 'Download and verify the latest stable %s release; reinstall in %s.\n' "$LC_MANAGER" "$LC_PREFIX"; fi
@@ -325,14 +326,18 @@ lc_remove() {
     if [ "$LC_MANAGER" = macos-pkg ]; then lc_command pkgutil --forget gr.makeasite.updateself || return 1; fi
     printf 'Uninstalled updateself. Shared directories and user logs retained.\n'
 }
-lc_archive_update() {
-    local asset="updateself-$LC_LATEST.tar.gz" path rel short=0
+lc_require_unchanged() {
+    local rel
     lc_safe_layout
     while IFS= read -r rel; do
         if [ -e "$LC_PREFIX/$rel" ] || [ -L "$LC_PREFIX/$rel" ]; then
             lc_owned "$rel" || lc_error "Modified/unowned file prevents self-update: $rel"
         fi
     done < <(lc_paths)
+}
+lc_archive_update() {
+    local asset="updateself-$LC_LATEST.tar.gz" path rel short=0
+    lc_require_unchanged
     lc_download "$asset" || return 1
     # Reject traversal, absolute entries, and links/special files before extraction.
     tar -tzf "$LC_WORK/$asset" > "$LC_WORK/entries" || return 1
@@ -366,6 +371,8 @@ lc_archive_update() {
             if [ -e "$LC_WORK/backup/$rel" ] || [ -L "$LC_WORK/backup/$rel" ]; then
                 if [ -e "$LC_PREFIX/$rel" ] || [ -L "$LC_PREFIX/$rel" ]; then lc_command rm -- "$LC_PREFIX/$rel" || lc_error 'Cannot clear destination for rollback'; fi
                 lc_command cp -pP "$LC_WORK/backup/$rel" "$LC_PREFIX/$rel" || { LC_KEEP=1; lc_error "Rollback failed: $rel; backup retained at $LC_WORK"; }
+            elif [ -e "$LC_PREFIX/$rel" ] || [ -L "$LC_PREFIX/$rel" ]; then
+                lc_command rm -- "$LC_PREFIX/$rel" || lc_error 'Cannot remove newly created managed file during rollback'
             fi
         done < <(lc_paths)
         # LC_KEEP is read by the generated helper's EXIT trap.
@@ -385,6 +392,7 @@ lc_perform() {
     elif [ "$LC_MANAGER" = archive ]; then lc_archive_update
     elif [ "$LC_MANAGER" = macos-pkg ]; then
         local arch asset
+        lc_require_unchanged
         arch=$(uname -m); case "$arch" in arm64|x86_64) : ;; *) lc_error 'Unsupported macOS architecture' ;; esac
         asset="updateself-$LC_LATEST-macos-$arch.pkg"
         lc_download "$asset" || return 1
@@ -427,7 +435,7 @@ lc_start() {
         done
         printf 'LC_COMMAND=('; printf '%q ' ${LC_COMMAND[@]+"${LC_COMMAND[@]}"}; printf ')\n'
         printf 'LC_LOCK=%q\nLC_KEEP=0\n' "$lock"
-        printf 'trap '\''rmdir "$LC_LOCK" 2>/dev/null || :; if [ "$LC_KEEP" -eq 0 ]; then rm -rf "$LC_WORK"; fi'\'' EXIT\n'
+        printf 'trap '\''rmdir "$LC_LOCK" 2>/dev/null || :; if [ "$LC_KEEP" -eq 0 ]; then rm -rf "$LC_WORK"; else printf "Recovery files retained at %%s\\n" "$LC_WORK" >&2; fi'\'' EXIT\n'
         printf 'trap '\''exit 130'\'' INT\ntrap '\''exit 143'\'' TERM\n'
         printf 'lc_perform\n'
     } > "$LC_WORK/helper.bash"

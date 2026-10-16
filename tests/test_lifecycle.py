@@ -214,6 +214,18 @@ exit 42
         self.assertFalse(self.exe.exists())
         self.assertIn("forget gr.makeasite.updateself", self.calls())
 
+    def test_macos_update_refuses_modified_files_before_download(self):
+        self.env.update(TEST_OS="Darwin", TEST_MAC="1")
+        manifest = self.prefix / "share/updateself/manifest"
+        manifest.rename(manifest.with_name("package-manifest"))
+        readme = self.prefix / "share/updateself/README.md"
+        readme.write_text("preserve these notes")
+        p = self.run_script("--self-update", "--yes")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("Modified/unowned", p.stderr)
+        self.assertEqual(readme.read_text(), "preserve these notes")
+        self.assertNotIn("releases/download", self.calls())
+
     def test_brew_owner_uses_brew_and_refuses_root(self):
         cellar = self.root / "Cellar/updateself/2.1.0"
         (cellar / "bin").mkdir(parents=True)

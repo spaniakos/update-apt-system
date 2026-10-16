@@ -76,7 +76,7 @@ For macOS pkg installs, the receipt is forgotten only after all managed files we
 removed. If modified files remain, the receipt and package-manifest remain and the
 command exits nonzero. pkgutil --forget alone does not uninstall files.
 
-Git/archive self-update refuses modified managed files. After a failed installer
+Git/archive and macOS pkg self-update refuse modified managed files. After a failed Git/archive installer
 or version check it restores the previous managed files and manifest. If interrupted
 or rollback fails, the private recovery directory remains under TMPDIR (normally
 /tmp); it contains backup/ and the previous manifest. Stop, inspect those files and
